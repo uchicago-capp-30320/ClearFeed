@@ -16,7 +16,7 @@ media/
 # Environment variables
 .env
 *.env
-
+.history
 # OS
 .DS_Store
 Thumbs.db
