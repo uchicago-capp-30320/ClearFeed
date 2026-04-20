@@ -1,8 +1,8 @@
 # ClearFeed
 
-Social media platforms send users an endless stream of content determined by algorithms with unknown weights and functions. People scroll through hundreds of posts daily without understand the big picture of what is being recommended to them and whether this actually aligns with their interests. 
+Social media platforms send users an endless stream of content determined by algorithms with unknown weights and functions. People scroll through hundreds of posts daily without understand the big picture of what is being recommended to them and whether this actually aligns with their interests.
 
-ClearFeed is a tool designed to give users a simple summary of who and what is showing up in their scrolling. The project begins as a modification of [Zeeschuimer](https://github.com/digitalmethodsinitiative/zeeschuimer), a browser extension that collects data from various online social media web interfaces. Using this tool, ClearFeed takes the metadata from posts and uses a local LLM to summarize content genres, common users, and flag uncomfortable topics. 
+ClearFeed is a tool designed to give users a simple summary of who and what is showing up in their scrolling. The project begins as a modification of [Zeeschuimer](https://github.com/digitalmethodsinitiative/zeeschuimer), a browser extension that collects data from various online social media web interfaces. Using this tool, ClearFeed takes the metadata from posts and uses a local LLM to summarize content genres, common users, and flag uncomfortable topics.
 
 ## Team Members
 
