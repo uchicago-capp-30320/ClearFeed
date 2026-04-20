@@ -24,7 +24,7 @@ $ uv sync
 ```
 
 ### Tech Stack
-This is a [Django](https://www.djangoproject.com/) application that will use a Javascript-based frontend such as [Vue](https://vuejs.org/). Our backend is coded in[Python >3.10](https://www.python.org/downloads/) and uses a local [HuggingFace](https://huggingface.co/) model for text analysis. Our data is stored on a [postgreSQL](https://www.postgresql.org/) server. We use [pytest](https://docs.pytest.org/en/stable/) for our testing.
+This is a [Django](https://www.djangoproject.com/) application that will use a Javascript-based frontend such as [Vue](https://vuejs.org/). Our backend is coded in [Python >3.10](https://www.python.org/downloads/) and uses a local [HuggingFace](https://huggingface.co/) model for text analysis. Our data is stored on a [postgreSQL](https://www.postgresql.org/) server through [Railway](https://railway.com/). We use [pytest](https://docs.pytest.org/en/stable/) for our testing.
 
 The following is our proposed folder structure
 ```
