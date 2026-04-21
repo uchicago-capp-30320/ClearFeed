@@ -30,17 +30,53 @@ The following is our proposed folder structure
 ```
 ClearFeed/
 ├── .github/
-│   └── workflows/  //   GitHub CI/CD files
-├── database/      // Folder to contain our handling of data in postgresSQL and HuggingFace
-├── app/            // Django Application folder which contains functionality for user profiles among other factors
-├── config/             //   Django config files
-├── docs/               //   Documentation, wireframes, models, and other products of development
-├── static/             // Static elements
-│   ├── css/        //   CSS Styles
-│   ├── js/         //   JavaScript functionality
-│   └── images/     //   Static images
-├──  templates/         // HTML templates for the web app
-└──  tests/             // Contains all tests for the project
+│   └── workflows/          // GitHub CI/CD files
+│       ├── ci-tests.yml
+│       └── ci-lint.yml
+│
+├── backend/                // Django backend application
+│   ├── api/                // API app with models, views, and routes
+│   │   ├── migrations/     // Database migration files
+│   │   │   ├── 0001_initial.py
+│   │   │   └── __init__.py
+│   │   ├── __init__.py
+│   │   ├── admin.py        // Django admin configuration
+│   │   ├── apps.py         // App configuration
+│   │   ├── models.py       // Database models
+│   │   ├── urls.py         // API route definitions
+│   │   └── views.py        // API view handlers
+│   ├── clearfeed_django/   // Django project config
+│   │   ├── __init__.py
+│   │   ├── asgi.py         // ASGI entry point
+│   │   ├── settings.py     // Django settings
+│   │   ├── urls.py         // Root URL configuration
+│   │   └── wsgi.py         // WSGI entry point
+│   └── manage.py           // Django management CLI
+│
+├── frontend/               // React frontend files
+│
+├── tests/                  // Contains all tests for the project
+│   ├── __init__.py
+│   └── test.py
+│
+├── docs/                   // Documentation, wireframes, and models
+│   ├── index.md            // Documentation landing page
+│   ├── architecture.md     // System architecture overview
+│   ├── models.md           // Data model documentation
+│   ├── changelog.md        // Project changelog
+│   ├── endpoints/          // API endpoint documentation
+│   │   └── import.md
+│   └── decisions/          // Architecture decision records
+│
+├── pyproject.toml          // Python project configuration
+├── uv.lock                 // uv dependency lockfile
+│
+├── .gitignore
+├── .env                    // Environment variables (not committed)
+├── .env.example            // Example environment file (committed)
+├── .pre-commit-config.yaml // Pre-commit hook configuration
+├── README.md
+└── LICENSE
 ```
 
 ## User Installation
