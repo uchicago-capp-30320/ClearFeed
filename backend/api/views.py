@@ -6,10 +6,12 @@ from api.models import (
     SentimentResult,
     Tweet,
     TweetMedia,
+    ToxicityResult,
     TwitterAuthor,
     ViewedTweet,
 )
 from api.services.sentiment import analyze_sentiment_text
+from api.services.toxicity import analyze_toxicity_text
 import json
 from datetime import datetime, timezone as dt_timezone
 from django.utils import timezone
@@ -212,6 +214,34 @@ def import_dataset(request):
             }
         )
 
+        # Analyze the tweet text during upload.
+        if tweet.full_text:
+            tweet.analysis_status = 'processing'
+            tweet.save(update_fields=['analysis_status'])
+
+            result = analyze_sentiment_text(tweet.full_text)
+
+            SentimentResult.objects.update_or_create(
+                tweet=tweet,
+                defaults={
+                    'sentiment': result['sentiment'],
+                    'confidence': result['confidence'],
+                }
+            )
+
+            toxicity_result = analyze_toxicity_text(tweet.full_text)
+
+            ToxicityResult.objects.update_or_create(
+                tweet=tweet,
+                defaults={
+                    'toxicity_label': toxicity_result['toxicity_label'],
+                    'confidence': toxicity_result['confidence'],
+                }
+            )
+
+            tweet.analysis_status = 'complete'
+            tweet.save(update_fields=['analysis_status'])
+
     # -----------------------------------------------------------------------------
     # Step 5 - insert tweet_media
     # media is stored once per media_key - the same image can appear across
@@ -290,72 +320,4 @@ def import_dataset(request):
         "status": "success",
         "session_id": str(session.id),
         "posts_received": len(posts)
-    })
-
-
-@csrf_exempt
-def analyze_sentiment(request):
-    # This endpoint should only be called with POST.
-    if request.method != 'POST':
-        return JsonResponse({"error": "POST required"}, status=405)
-
-    # Read the JSON body and get the session id.
-    payload = json.loads(request.body.decode('utf-8'))
-    session_id = payload['session_id']
-
-    # Find the session we want to analyze.
-    session = BrowseSession.objects.get(id=session_id)
-
-    # Mark the whole session as analyzing.
-    session.status = 'analyzing'
-    session.save(update_fields=['status'])
-
-    # Get each pending tweet tied to this session.
-    tweets = (
-        Tweet.objects
-        .filter(viewedtweet__session=session, analysis_status='pending')
-        .distinct()
-    )
-
-    analyzed_count = 0
-    skipped_count = 0
-
-    for tweet in tweets:
-
-        # Skip tweets that do not have text.
-        if not tweet.full_text:
-            skipped_count += 1
-            continue
-
-        # Mark this tweet as being analyzed.
-        tweet.analysis_status = 'processing'
-        tweet.save(update_fields=['analysis_status'])
-
-        # Run sentiment analysis on the tweet text.
-        result = analyze_sentiment_text(tweet.full_text)
-
-        # Save the sentiment result for this tweet.
-        SentimentResult.objects.update_or_create(
-            tweet=tweet,
-            defaults={
-                'sentiment': result['sentiment'],
-                'confidence': result['confidence'],
-            }
-        )
-
-        # Mark this tweet as done.
-        tweet.analysis_status = 'complete'
-        tweet.save(update_fields=['analysis_status'])
-        analyzed_count += 1
-
-    # Mark the full session as complete when all tweets are done.
-    session.status = 'complete'
-    session.ended_at = timezone.now()
-    session.save(update_fields=['status', 'ended_at'])
-
-    return JsonResponse({
-        "status": "success",
-        "session_id": str(session.id),
-        "tweets_analyzed": analyzed_count,
-        "tweets_skipped": skipped_count,
     })
