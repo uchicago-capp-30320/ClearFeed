@@ -9,8 +9,7 @@ repos:
   rev: v5.0.0
   hooks:
     - id: trailing-whitespace
-      exclude: |
-        (^README\.md$|\.github/)
+      args: [--markdown-linebreak-ext=md]
     - id: check-added-large-files
     - id: check-case-conflict
     - id: check-executables-have-shebangs
