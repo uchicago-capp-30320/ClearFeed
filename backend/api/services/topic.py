@@ -18,6 +18,12 @@ def analyze_topic_text(text):
     classifier = get_topic_classifier()
     result = classifier(text)[0]
 
+    # Output: one topic label such as Adult, Art & Design, Software Dev.,
+    # Crime & Law, Education & Jobs, Hardware, Entertainment, Social Life,
+    # Fashion & Beauty, Finance & Business, Food & Dining, Games, Health,
+    # History, Home & Hobbies, Industrial, Literature, Politics, Religion,
+    # Science & Tech., Software, Sports & Fitness, Transportation, or Travel,
+    # plus a score.
     return {
         "topic": result["label"].lower(),
         "confidence": float(result["score"]),

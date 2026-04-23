@@ -19,6 +19,7 @@ def analyze_toxicity_text(text):
     results = classifier(text)[0]
     top_result = max(results, key=lambda item: item["score"])
 
+    # Output: top toxicity label like neutral/toxic and its score.
     return {
         "toxicity_label": top_result["label"].lower(),
         "confidence": float(top_result["score"]),

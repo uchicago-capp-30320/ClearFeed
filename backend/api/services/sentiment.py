@@ -18,6 +18,7 @@ def analyze_sentiment_text(text):
     classifier = get_sentiment_classifier()
     result = classifier(text)[0]
 
+    # Output: one sentiment label like positive/neutral/negative and a score.
     return {
         "sentiment": result["label"].lower(),
         "confidence": float(result["score"]),
