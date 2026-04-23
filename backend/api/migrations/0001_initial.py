@@ -6,228 +6,380 @@ from django.db import migrations, models
 
 
 class Migration(migrations.Migration):
-
     initial = True
 
-    dependencies = [
-    ]
+    dependencies = []
 
     operations = [
         migrations.CreateModel(
-            name='AppUser',
+            name="AppUser",
             fields=[
-                ('id', models.UUIDField(default=uuid.uuid4, editable=False, primary_key=True, serialize=False)),
-                ('created_at', models.DateTimeField(auto_now_add=True)),
+                (
+                    "id",
+                    models.UUIDField(
+                        default=uuid.uuid4,
+                        editable=False,
+                        primary_key=True,
+                        serialize=False,
+                    ),
+                ),
+                ("created_at", models.DateTimeField(auto_now_add=True)),
             ],
             options={
-                'db_table': 'app_user',
+                "db_table": "app_user",
             },
         ),
         migrations.CreateModel(
-            name='Tweet',
+            name="Tweet",
             fields=[
-                ('tweet_id', models.TextField(primary_key=True, serialize=False)),
-                ('conversation_id', models.TextField(null=True)),
-                ('is_reply', models.BooleanField(default=False)),
-                ('in_reply_to_tweet_id', models.TextField(null=True)),
-                ('in_reply_to_screen_name', models.TextField(null=True)),
-                ('timestamp_collected', models.BigIntegerField(null=True)),
-                ('full_text', models.TextField(null=True)),
-                ('hashtags', models.JSONField(null=True)),
-                ('lang', models.CharField(max_length=10, null=True)),
-                ('source_app', models.TextField(null=True)),
-                ('source_platform_url', models.TextField(null=True)),
-                ('is_quote_status', models.BooleanField(default=False)),
-                ('is_retweet', models.BooleanField(default=False)),
-                ('possibly_sensitive', models.BooleanField(default=False)),
-                ('promoted', models.BooleanField(default=False)),
-                ('tweet_created_at', models.DateTimeField(null=True)),
-                ('analysis_status', models.TextField(choices=[('pending', 'pending'), ('processing', 'processing'), ('complete', 'complete'), ('failed', 'failed')], default='pending')),
+                ("tweet_id", models.TextField(primary_key=True, serialize=False)),
+                ("conversation_id", models.TextField(null=True)),
+                ("is_reply", models.BooleanField(default=False)),
+                ("in_reply_to_tweet_id", models.TextField(null=True)),
+                ("in_reply_to_screen_name", models.TextField(null=True)),
+                ("timestamp_collected", models.BigIntegerField(null=True)),
+                ("full_text", models.TextField(null=True)),
+                ("hashtags", models.JSONField(null=True)),
+                ("lang", models.CharField(max_length=10, null=True)),
+                ("source_app", models.TextField(null=True)),
+                ("source_platform_url", models.TextField(null=True)),
+                ("is_quote_status", models.BooleanField(default=False)),
+                ("is_retweet", models.BooleanField(default=False)),
+                ("possibly_sensitive", models.BooleanField(default=False)),
+                ("promoted", models.BooleanField(default=False)),
+                ("tweet_created_at", models.DateTimeField(null=True)),
+                (
+                    "analysis_status",
+                    models.TextField(
+                        choices=[
+                            ("pending", "pending"),
+                            ("processing", "processing"),
+                            ("complete", "complete"),
+                            ("failed", "failed"),
+                        ],
+                        default="pending",
+                    ),
+                ),
             ],
             options={
-                'db_table': 'tweet',
+                "db_table": "tweet",
             },
         ),
         migrations.CreateModel(
-            name='BrowseSession',
+            name="BrowseSession",
             fields=[
-                ('id', models.UUIDField(default=uuid.uuid4, editable=False, primary_key=True, serialize=False)),
-                ('platform', models.TextField()),
-                ('user_agent', models.TextField(null=True)),
-                ('status', models.TextField(choices=[('ingesting', 'ingesting'), ('queued', 'queued'), ('analyzing', 'analyzing'), ('complete', 'complete'), ('failed', 'failed')], default='ingesting')),
-                ('started_at', models.DateTimeField(auto_now_add=True)),
-                ('ended_at', models.DateTimeField(null=True)),
-                ('user', models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, to='api.appuser')),
+                (
+                    "id",
+                    models.UUIDField(
+                        default=uuid.uuid4,
+                        editable=False,
+                        primary_key=True,
+                        serialize=False,
+                    ),
+                ),
+                ("platform", models.TextField()),
+                ("user_agent", models.TextField(null=True)),
+                (
+                    "status",
+                    models.TextField(
+                        choices=[
+                            ("ingesting", "ingesting"),
+                            ("queued", "queued"),
+                            ("analyzing", "analyzing"),
+                            ("complete", "complete"),
+                            ("failed", "failed"),
+                        ],
+                        default="ingesting",
+                    ),
+                ),
+                ("started_at", models.DateTimeField(auto_now_add=True)),
+                ("ended_at", models.DateTimeField(null=True)),
+                (
+                    "user",
+                    models.ForeignKey(
+                        on_delete=django.db.models.deletion.CASCADE, to="api.appuser"
+                    ),
+                ),
             ],
             options={
-                'db_table': 'browse_session',
+                "db_table": "browse_session",
             },
         ),
         migrations.CreateModel(
-            name='ToxicityResult',
+            name="ToxicityResult",
             fields=[
-                ('id', models.UUIDField(default=uuid.uuid4, editable=False, primary_key=True, serialize=False)),
-                ('toxicity_label', models.TextField()),
-                ('confidence', models.FloatField(null=True)),
-                ('analyzed_at', models.DateTimeField(auto_now_add=True)),
-                ('tweet', models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, to='api.tweet')),
+                (
+                    "id",
+                    models.UUIDField(
+                        default=uuid.uuid4,
+                        editable=False,
+                        primary_key=True,
+                        serialize=False,
+                    ),
+                ),
+                ("toxicity_label", models.TextField()),
+                ("confidence", models.FloatField(null=True)),
+                ("analyzed_at", models.DateTimeField(auto_now_add=True)),
+                (
+                    "tweet",
+                    models.ForeignKey(
+                        on_delete=django.db.models.deletion.CASCADE, to="api.tweet"
+                    ),
+                ),
             ],
             options={
-                'db_table': 'toxicity_result',
+                "db_table": "toxicity_result",
             },
         ),
         migrations.CreateModel(
-            name='TopicResult',
+            name="TopicResult",
             fields=[
-                ('id', models.UUIDField(default=uuid.uuid4, editable=False, primary_key=True, serialize=False)),
-                ('topic', models.TextField()),
-                ('confidence', models.FloatField(null=True)),
-                ('analyzed_at', models.DateTimeField(auto_now_add=True)),
-                ('tweet', models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, to='api.tweet')),
+                (
+                    "id",
+                    models.UUIDField(
+                        default=uuid.uuid4,
+                        editable=False,
+                        primary_key=True,
+                        serialize=False,
+                    ),
+                ),
+                ("topic", models.TextField()),
+                ("confidence", models.FloatField(null=True)),
+                ("analyzed_at", models.DateTimeField(auto_now_add=True)),
+                (
+                    "tweet",
+                    models.ForeignKey(
+                        on_delete=django.db.models.deletion.CASCADE, to="api.tweet"
+                    ),
+                ),
             ],
             options={
-                'db_table': 'topic_result',
+                "db_table": "topic_result",
             },
         ),
         migrations.CreateModel(
-            name='SentimentResult',
+            name="SentimentResult",
             fields=[
-                ('id', models.UUIDField(default=uuid.uuid4, editable=False, primary_key=True, serialize=False)),
-                ('sentiment', models.TextField()),
-                ('confidence', models.FloatField(null=True)),
-                ('analyzed_at', models.DateTimeField(auto_now_add=True)),
-                ('tweet', models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, to='api.tweet')),
+                (
+                    "id",
+                    models.UUIDField(
+                        default=uuid.uuid4,
+                        editable=False,
+                        primary_key=True,
+                        serialize=False,
+                    ),
+                ),
+                ("sentiment", models.TextField()),
+                ("confidence", models.FloatField(null=True)),
+                ("analyzed_at", models.DateTimeField(auto_now_add=True)),
+                (
+                    "tweet",
+                    models.ForeignKey(
+                        on_delete=django.db.models.deletion.CASCADE, to="api.tweet"
+                    ),
+                ),
             ],
             options={
-                'db_table': 'sentiment_result',
+                "db_table": "sentiment_result",
             },
         ),
         migrations.CreateModel(
-            name='PoliticalLeaningResult',
+            name="PoliticalLeaningResult",
             fields=[
-                ('id', models.UUIDField(default=uuid.uuid4, editable=False, primary_key=True, serialize=False)),
-                ('leaning', models.TextField()),
-                ('confidence', models.FloatField(null=True)),
-                ('analyzed_at', models.DateTimeField(auto_now_add=True)),
-                ('tweet', models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, to='api.tweet')),
+                (
+                    "id",
+                    models.UUIDField(
+                        default=uuid.uuid4,
+                        editable=False,
+                        primary_key=True,
+                        serialize=False,
+                    ),
+                ),
+                ("leaning", models.TextField()),
+                ("confidence", models.FloatField(null=True)),
+                ("analyzed_at", models.DateTimeField(auto_now_add=True)),
+                (
+                    "tweet",
+                    models.ForeignKey(
+                        on_delete=django.db.models.deletion.CASCADE, to="api.tweet"
+                    ),
+                ),
             ],
             options={
-                'db_table': 'political_leaning_result',
+                "db_table": "political_leaning_result",
             },
         ),
         migrations.CreateModel(
-            name='TweetMedia',
+            name="TweetMedia",
             fields=[
-                ('id', models.UUIDField(default=uuid.uuid4, editable=False, primary_key=True, serialize=False)),
-                ('media_key', models.TextField(unique=True)),
-                ('type', models.TextField(null=True)),
-                ('media_url', models.TextField(null=True)),
-                ('width', models.IntegerField(null=True)),
-                ('height', models.IntegerField(null=True)),
-                ('duration_ms', models.IntegerField(null=True)),
-                ('video_variants', models.JSONField(null=True)),
-                ('created_at', models.DateTimeField(auto_now_add=True)),
-                ('tweet', models.ForeignKey(db_column='tweet_id', on_delete=django.db.models.deletion.CASCADE, to='api.tweet')),
+                (
+                    "id",
+                    models.UUIDField(
+                        default=uuid.uuid4,
+                        editable=False,
+                        primary_key=True,
+                        serialize=False,
+                    ),
+                ),
+                ("media_key", models.TextField(unique=True)),
+                ("type", models.TextField(null=True)),
+                ("media_url", models.TextField(null=True)),
+                ("width", models.IntegerField(null=True)),
+                ("height", models.IntegerField(null=True)),
+                ("duration_ms", models.IntegerField(null=True)),
+                ("video_variants", models.JSONField(null=True)),
+                ("created_at", models.DateTimeField(auto_now_add=True)),
+                (
+                    "tweet",
+                    models.ForeignKey(
+                        db_column="tweet_id",
+                        on_delete=django.db.models.deletion.CASCADE,
+                        to="api.tweet",
+                    ),
+                ),
             ],
             options={
-                'db_table': 'tweet_media',
+                "db_table": "tweet_media",
             },
         ),
         migrations.CreateModel(
-            name='TwitterAuthor',
+            name="TwitterAuthor",
             fields=[
-                ('author_twitter_id', models.TextField(primary_key=True, serialize=False)),
-                ('screen_name', models.CharField(max_length=50, null=True)),
-                ('display_name', models.CharField(max_length=100, null=True)),
-                ('bio', models.TextField(null=True)),
-                ('location', models.TextField(null=True)),
-                ('followers_count', models.IntegerField(null=True)),
-                ('following_count', models.IntegerField(null=True)),
-                ('statuses_count', models.IntegerField(null=True)),
-                ('is_blue_verified', models.BooleanField(null=True)),
-                ('account_created_at', models.DateTimeField(null=True)),
-                ('last_updated_at', models.DateTimeField(auto_now=True)),
+                (
+                    "author_twitter_id",
+                    models.TextField(primary_key=True, serialize=False),
+                ),
+                ("screen_name", models.CharField(max_length=50, null=True)),
+                ("display_name", models.CharField(max_length=100, null=True)),
+                ("bio", models.TextField(null=True)),
+                ("location", models.TextField(null=True)),
+                ("followers_count", models.IntegerField(null=True)),
+                ("following_count", models.IntegerField(null=True)),
+                ("statuses_count", models.IntegerField(null=True)),
+                ("is_blue_verified", models.BooleanField(null=True)),
+                ("account_created_at", models.DateTimeField(null=True)),
+                ("last_updated_at", models.DateTimeField(auto_now=True)),
             ],
             options={
-                'db_table': 'twitter_author',
-                'indexes': [models.Index(fields=['screen_name'], name='twitter_aut_screen__e602df_idx')],
+                "db_table": "twitter_author",
+                "indexes": [
+                    models.Index(
+                        fields=["screen_name"], name="twitter_aut_screen__e602df_idx"
+                    )
+                ],
             },
         ),
         migrations.AddField(
-            model_name='tweet',
-            name='author',
-            field=models.ForeignKey(null=True, on_delete=django.db.models.deletion.SET_NULL, to='api.twitterauthor'),
+            model_name="tweet",
+            name="author",
+            field=models.ForeignKey(
+                null=True,
+                on_delete=django.db.models.deletion.SET_NULL,
+                to="api.twitterauthor",
+            ),
         ),
         migrations.CreateModel(
-            name='ViewedTweet',
+            name="ViewedTweet",
             fields=[
-                ('id', models.UUIDField(default=uuid.uuid4, editable=False, primary_key=True, serialize=False)),
-                ('timestamp_collected', models.BigIntegerField(null=True)),
-                ('favorite_count', models.IntegerField(null=True)),
-                ('retweet_count', models.IntegerField(null=True)),
-                ('reply_count', models.IntegerField(null=True)),
-                ('quote_count', models.IntegerField(null=True)),
-                ('bookmark_count', models.IntegerField(null=True)),
-                ('view_count', models.BigIntegerField(null=True)),
-                ('raw_data', models.JSONField(null=True)),
-                ('session', models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, to='api.browsesession')),
-                ('tweet', models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, to='api.tweet')),
-                ('user', models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, to='api.appuser')),
+                (
+                    "id",
+                    models.UUIDField(
+                        default=uuid.uuid4,
+                        editable=False,
+                        primary_key=True,
+                        serialize=False,
+                    ),
+                ),
+                ("timestamp_collected", models.BigIntegerField(null=True)),
+                ("favorite_count", models.IntegerField(null=True)),
+                ("retweet_count", models.IntegerField(null=True)),
+                ("reply_count", models.IntegerField(null=True)),
+                ("quote_count", models.IntegerField(null=True)),
+                ("bookmark_count", models.IntegerField(null=True)),
+                ("view_count", models.BigIntegerField(null=True)),
+                ("raw_data", models.JSONField(null=True)),
+                (
+                    "session",
+                    models.ForeignKey(
+                        on_delete=django.db.models.deletion.CASCADE,
+                        to="api.browsesession",
+                    ),
+                ),
+                (
+                    "tweet",
+                    models.ForeignKey(
+                        on_delete=django.db.models.deletion.CASCADE, to="api.tweet"
+                    ),
+                ),
+                (
+                    "user",
+                    models.ForeignKey(
+                        on_delete=django.db.models.deletion.CASCADE, to="api.appuser"
+                    ),
+                ),
             ],
             options={
-                'db_table': 'viewed_tweet',
+                "db_table": "viewed_tweet",
             },
         ),
         migrations.AddIndex(
-            model_name='browsesession',
-            index=models.Index(fields=['user'], name='browse_sess_user_id_f32c89_idx'),
+            model_name="browsesession",
+            index=models.Index(fields=["user"], name="browse_sess_user_id_f32c89_idx"),
         ),
         migrations.AddIndex(
-            model_name='toxicityresult',
-            index=models.Index(fields=['tweet'], name='toxicity_re_tweet_i_7119ed_idx'),
+            model_name="toxicityresult",
+            index=models.Index(fields=["tweet"], name="toxicity_re_tweet_i_7119ed_idx"),
         ),
         migrations.AddIndex(
-            model_name='topicresult',
-            index=models.Index(fields=['tweet'], name='topic_resul_tweet_i_f75aa4_idx'),
+            model_name="topicresult",
+            index=models.Index(fields=["tweet"], name="topic_resul_tweet_i_f75aa4_idx"),
         ),
         migrations.AddIndex(
-            model_name='sentimentresult',
-            index=models.Index(fields=['tweet'], name='sentiment_r_tweet_i_96dde5_idx'),
+            model_name="sentimentresult",
+            index=models.Index(fields=["tweet"], name="sentiment_r_tweet_i_96dde5_idx"),
         ),
         migrations.AddIndex(
-            model_name='politicalleaningresult',
-            index=models.Index(fields=['tweet'], name='political_l_tweet_i_fc8ecd_idx'),
+            model_name="politicalleaningresult",
+            index=models.Index(fields=["tweet"], name="political_l_tweet_i_fc8ecd_idx"),
         ),
         migrations.AddIndex(
-            model_name='tweetmedia',
-            index=models.Index(fields=['tweet'], name='tweet_media_tweet_i_1828c7_idx'),
+            model_name="tweetmedia",
+            index=models.Index(fields=["tweet"], name="tweet_media_tweet_i_1828c7_idx"),
         ),
         migrations.AddIndex(
-            model_name='tweet',
-            index=models.Index(fields=['author'], name='tweet_author__76737f_idx'),
+            model_name="tweet",
+            index=models.Index(fields=["author"], name="tweet_author__76737f_idx"),
         ),
         migrations.AddIndex(
-            model_name='tweet',
-            index=models.Index(fields=['conversation_id'], name='tweet_convers_a1fa80_idx'),
+            model_name="tweet",
+            index=models.Index(
+                fields=["conversation_id"], name="tweet_convers_a1fa80_idx"
+            ),
         ),
         migrations.AddIndex(
-            model_name='tweet',
-            index=models.Index(fields=['tweet_created_at'], name='tweet_tweet_c_82f2d5_idx'),
+            model_name="tweet",
+            index=models.Index(
+                fields=["tweet_created_at"], name="tweet_tweet_c_82f2d5_idx"
+            ),
         ),
         migrations.AddIndex(
-            model_name='tweet',
-            index=models.Index(fields=['analysis_status'], name='tweet_analysi_704090_idx'),
+            model_name="tweet",
+            index=models.Index(
+                fields=["analysis_status"], name="tweet_analysi_704090_idx"
+            ),
         ),
         migrations.AddIndex(
-            model_name='viewedtweet',
-            index=models.Index(fields=['user'], name='viewed_twee_user_id_5c9e14_idx'),
+            model_name="viewedtweet",
+            index=models.Index(fields=["user"], name="viewed_twee_user_id_5c9e14_idx"),
         ),
         migrations.AddIndex(
-            model_name='viewedtweet',
-            index=models.Index(fields=['session'], name='viewed_twee_session_3b565a_idx'),
+            model_name="viewedtweet",
+            index=models.Index(
+                fields=["session"], name="viewed_twee_session_3b565a_idx"
+            ),
         ),
         migrations.AddIndex(
-            model_name='viewedtweet',
-            index=models.Index(fields=['tweet'], name='viewed_twee_tweet_i_b6b1cc_idx'),
+            model_name="viewedtweet",
+            index=models.Index(fields=["tweet"], name="viewed_twee_tweet_i_b6b1cc_idx"),
         ),
     ]
