@@ -53,7 +53,12 @@ ClearFeed/
 │   │   └── wsgi.py         // WSGI entry point
 │   └── manage.py           // Django management CLI
 │
-├── frontend/               // React frontend files
+├── frontend/ 
+|   ├── static/             // Static elements
+│   │   ├── css/            //   CSS Styles
+│   │   ├── js/             //   JavaScript functionality
+│   │   └── images/         //   Static images
+|   └──templates/           // HTML templates for the web app
 │
 ├── tests/                  // Contains all tests for the project
 │   ├── __init__.py
