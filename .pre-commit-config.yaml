@@ -9,6 +9,8 @@ repos:
   rev: v5.0.0
   hooks:
     - id: trailing-whitespace
+      exclude: |
+        (^README\.md$|\.github/)
     - id: check-added-large-files
     - id: check-case-conflict
     - id: check-executables-have-shebangs
