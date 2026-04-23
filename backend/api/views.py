@@ -4,6 +4,7 @@ from api.models import (
     AppUser,
     BrowseSession,
     SentimentResult,
+    TopicResult,
     Tweet,
     TweetMedia,
     ToxicityResult,
@@ -11,6 +12,7 @@ from api.models import (
     ViewedTweet,
 )
 from api.services.sentiment import analyze_sentiment_text
+from api.services.topic import analyze_topic_text
 from api.services.toxicity import analyze_toxicity_text
 import json
 from datetime import datetime, timezone as dt_timezone
@@ -236,6 +238,16 @@ def import_dataset(request):
                 defaults={
                     'toxicity_label': toxicity_result['toxicity_label'],
                     'confidence': toxicity_result['confidence'],
+                }
+            )
+
+            topic_result = analyze_topic_text(tweet.full_text)
+
+            TopicResult.objects.update_or_create(
+                tweet=tweet,
+                defaults={
+                    'topic': topic_result['topic'],
+                    'confidence': topic_result['confidence'],
                 }
             )
 
