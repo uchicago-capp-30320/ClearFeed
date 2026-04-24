@@ -1,123 +1,94 @@
-⸻
-
-ClearFeed Endpoints (Analysis)
+# ClearFeed Endpoints (Analysis)
 
 The following endpoints support data ingestion and analysis-related pages within the ClearFeed application.
 
-⸻
+---
 
-/import_dataset
+## `/import_dataset`
 
-Parameters:
+### Parameters
+- `request`: Incoming API POST request JSON from Zeeschuimer browser extension
 
-* request: Incoming API POST request JSON from Zeeschuimer browser extension
+### Function
+- Parses incoming Zeeschuimer NDJSON for relevant feed data
+- Ingests processed data into backend system
+- This is an API endpoint and does not render an HTML template
 
-Function:
+### Response
+- JSON response indicating ingestion status
 
-* This view parses through incoming Zeeschuimer NDJSON for relevant feed data and ingests accordingly into backend system. This is an API endpoint and does not on its own redirect to any HTML template.
+### Template Context Variables
+- None
 
-Response:
+---
 
-* JSON response indicating ingestion status
+## `/analysis`
 
-Template Context Variables:
+### Parameters
+- `user_id`: Primary key for `AppUser`
 
-* None
+### Response
+- `full_analysis.html`: HTML page displaying comprehensive analysis of user's feed data
 
-⸻
+### Template Context Variables
+- `user`: corresponding `AppUser` object  
+- `sentiment_results`: list of `SentimentResult` objects  
+- `topic_results`: list of `TopicResult` objects  
+- `political_leaning_results`: list of `PoliticalLeaningResult` objects  
+- `toxicity_results`: list of `ToxicityResult` objects  
 
-/analysis
+---
 
-Parameters:
+## `/sentiment`
 
-* user_id: PK to AppUser
+### Parameters
+- `user_id`: Primary key for `AppUser`
 
-Response:
+### Response
+- `sentiment.html`: HTML page displaying sentiment-specific analysis of user's feed data
 
-* full_analysis.html: HTML page displaying comprehensive analysis of user's feed data
+### Template Context Variables
+- `user`: corresponding `AppUser` object  
+- `sentiment_results`: list of `SentimentResult` objects  
 
-Template Context Variables:
+---
 
-* user: corresponding AppUser object
+## `/topics`
 
-* sentiment_results: list of SentimentResult model objects traced to user
+### Parameters
+- `user_id`: Primary key for `AppUser`
 
-* topic_results: list of TopicResult model objects traced to user
+### Response
+- `topics.html`: HTML page displaying topic-specific analysis of user's feed data
 
-* political_leaning_results: list of PoliticalLeaningResult model objects traced to user
+### Template Context Variables
+- `user`: corresponding `AppUser` object  
+- `topic_results`: list of `TopicResult` objects  
 
-* toxicity_results: list of ToxicityResult model objects traced to user
+---
 
-⸻
+## `/political_leaning`
 
-/sentiment
+### Parameters
+- `user_id`: Primary key for `AppUser`
 
-Parameters:
+### Response
+- `political_leaning.html`: HTML page displaying political identity analysis of user's feed data
 
-* user_id: PK to AppUser
+### Template Context Variables
+- `user`: corresponding `AppUser` object  
+- `political_leaning_results`: list of `PoliticalLeaningResult` objects  
 
-Response:
+---
 
-* sentiment.html: HTML page displaying sentiment-specific analysis of user's feed data
+## `/toxicity`
 
-Template Context Variables:
+### Parameters
+- `user_id`: Primary key for `AppUser`
 
-* user: corresponding AppUser object
+### Response
+- `toxicity.html`: HTML page displaying toxicity-specific analysis of user's feed data
 
-* sentiment_results: list of SentimentResult model objects traced to user
-
-⸻
-
-/topics
-
-Parameters:
-
-* user_id: PK to AppUser
-
-Response:
-
-* topics.html: HTML page displaying topic-specific analysis of user's feed data
-
-Template Context Variables:
-
-* user: corresponding AppUser object
-
-* topic_results: list of TopicResult model objects traced to user
-
-⸻
-
-/political_leaning
-
-Parameters:
-
-* user_id: PK to AppUser
-
-Response:
-
-* political_leaning.html: HTML page displaying political identity analysis of user's feed data
-
-Template Context Variables:
-
-* user: corresponding AppUser object
-
-* political_leaning_results: list of PoliticalLeaningResult model objects traced to user
-
-⸻
-
-/toxicity
-
-Parameters:
-
-* user_id: PK to AppUser
-
-Response:
-
-* toxicity.html: HTML page displaying toxicity-specific analysis of user's feed data
-
-Template Context Variables:
-
-* user: corresponding AppUser object
-
-* toxicity_results: list of ToxicityResult model objects traced to user
-
-⸻
+### Template Context Variables
+- `user`: corresponding `AppUser` object  
+- `toxicity_results`: list of `ToxicityResult` objects  

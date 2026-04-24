@@ -1,87 +1,68 @@
-⸻
-
-ClearFeed Endpoints (Administrative)
+# ClearFeed Endpoints (Administrative)
 
 The following endpoints support administrative and non-analysis-related pages within the ClearFeed application.
 
-⸻
+---
 
-/home
+## `/home`
 
-Parameters:
+### Parameters
+- None
 
-* None
+### Response
+- `home.html`: HTML page displaying the application’s landing page
 
-Response:
+### Template Context Variables
+- None
 
-* home.html: HTML page displaying the application’s landing page
+---
 
-Template Context Variables:
+## `/login`
 
-* None
+### Parameters
+- None
 
-⸻
+### Response
+- `login.html`: HTML page for user login
 
-/login
+### Template Context Variables
+- None
 
-Parameters:
+---
 
-* None
+## `/profile`
 
-Response:
+### Parameters
+- `user_id`: Primary key for `AppUser`
 
-* login.html: HTML page for user login
+### Response
+- `profile.html`: HTML page displaying user-specific profile information
 
-Template Context Variables:
+### Template Context Variables
+- `user`: corresponding `AppUser` object
 
-* None
+---
 
-⸻
+## `/privacy`
 
-/profile
+### Parameters
+- None
 
-Parameters:
+### Response
+- `privacy.html`: HTML page displaying the application’s privacy policy
 
-* user_id: PK to AppUser
+### Template Context Variables
+- None
 
-Response:
+---
 
-* profile.html: HTML page displaying user-specific profile information
+## `/tutorial`
 
-Template Context Variables:
+### Parameters
+- None
 
-* user: AppUser
+### Response
+- `tutorial.html`: HTML page providing a brief tutorial on using the application and browser extension
 
-⸻
-
-/privacy
-
-Parameters:
-
-* None
-
-Response:
-
-* privacy.html: HTML page displaying the application’s privacy policy
-
-Template Context Variables:
-
-* None
-
-⸻
-
-/tutorial
-
-Parameters:
-
-* None
-
-Response:
-
-* tutorial.html: HTML page providing a brief tutorial on using the application and browser extension
-
-Template Context Variables:
-
-* None
-
-⸻
+### Template Context Variables
+- None
