@@ -246,17 +246,17 @@ def import_dataset(request):
 
         # Analyze the tweet text during upload.
         if tweet.full_text:
-            tweet.analysis_status = 'processing'
-            tweet.save(update_fields=['analysis_status'])
+            tweet.analysis_status = "processing"
+            tweet.save(update_fields=["analysis_status"])
 
             result = analyze_sentiment_text(tweet.full_text)
 
             SentimentResult.objects.update_or_create(
                 tweet=tweet,
                 defaults={
-                    'sentiment': result['sentiment'],
-                    'confidence': result['confidence'],
-                }
+                    "sentiment": result["sentiment"],
+                    "confidence": result["confidence"],
+                },
             )
 
             toxicity_result = analyze_toxicity_text(tweet.full_text)
@@ -264,9 +264,9 @@ def import_dataset(request):
             ToxicityResult.objects.update_or_create(
                 tweet=tweet,
                 defaults={
-                    'toxicity_label': toxicity_result['toxicity_label'],
-                    'confidence': toxicity_result['confidence'],
-                }
+                    "toxicity_label": toxicity_result["toxicity_label"],
+                    "confidence": toxicity_result["confidence"],
+                },
             )
 
             topic_result = analyze_topic_text(tweet.full_text)
@@ -274,20 +274,20 @@ def import_dataset(request):
             TopicResult.objects.update_or_create(
                 tweet=tweet,
                 defaults={
-                    'topic': topic_result['topic'],
-                    'confidence': topic_result['confidence'],
-                }
+                    "topic": topic_result["topic"],
+                    "confidence": topic_result["confidence"],
+                },
             )
 
-            tweet.analysis_status = 'complete'
-            tweet.save(update_fields=['analysis_status'])
+            tweet.analysis_status = "complete"
+            tweet.save(update_fields=["analysis_status"])
 
-    # -----------------------------------------------------------------------------
-    # Step 5 - insert tweet_media
-    # media is stored once per media_key - the same image can appear across
-    # multiple tweets but we only store it once
-    # extended_entities is used instead of entities because it contains
-    # the full media info including video variants
+        # -----------------------------------------------------------------------------
+        # Step 5 - insert tweet_media
+        # media is stored once per media_key - the same image can appear across
+        # multiple tweets but we only store it once
+        # extended_entities is used instead of entities because it contains
+        # the full media info including video variants
 
         media_items = (
             post.get("data", {})
