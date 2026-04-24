@@ -5,11 +5,17 @@ from django.views.decorators.csrf import csrf_exempt
 from api.models import (
     AppUser,
     BrowseSession,
-    TwitterAuthor,
+    SentimentResult,
+    TopicResult,
     Tweet,
     TweetMedia,
+    ToxicityResult,
+    TwitterAuthor,
     ViewedTweet,
 )
+from api.services.sentiment import analyze_sentiment_text
+from api.services.topic import analyze_topic_text
+from api.services.toxicity import analyze_toxicity_text
 import json
 from datetime import datetime, timezone as dt_timezone
 from django.utils import timezone
@@ -237,6 +243,44 @@ def import_dataset(request):
                 "analysis_status": "pending",
             },
         )
+
+        # Analyze the tweet text during upload.
+        if tweet.full_text:
+            tweet.analysis_status = "processing"
+            tweet.save(update_fields=["analysis_status"])
+
+            result = analyze_sentiment_text(tweet.full_text)
+
+            SentimentResult.objects.update_or_create(
+                tweet=tweet,
+                defaults={
+                    "sentiment": result["sentiment"],
+                    "confidence": result["confidence"],
+                },
+            )
+
+            toxicity_result = analyze_toxicity_text(tweet.full_text)
+
+            ToxicityResult.objects.update_or_create(
+                tweet=tweet,
+                defaults={
+                    "toxicity_label": toxicity_result["toxicity_label"],
+                    "confidence": toxicity_result["confidence"],
+                },
+            )
+
+            topic_result = analyze_topic_text(tweet.full_text)
+
+            TopicResult.objects.update_or_create(
+                tweet=tweet,
+                defaults={
+                    "topic": topic_result["topic"],
+                    "confidence": topic_result["confidence"],
+                },
+            )
+
+            tweet.analysis_status = "complete"
+            tweet.save(update_fields=["analysis_status"])
 
         # -----------------------------------------------------------------------------
         # Step 5 - insert tweet_media
