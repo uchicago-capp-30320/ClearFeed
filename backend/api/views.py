@@ -380,8 +380,15 @@ def full_analysis(request, user_id):
         "sentiment_results": SentimentResult.objects.filter(
             tweet__viewedtweet__user=user
         ),
+        "topic_results": TopicResult.objects.filter(tweet__viewedtweet__user=user),
+        "political_leaning_results": PoliticalLeaningResult.objects.filter(
+            tweet__viewedtweet__user=user
+        ),
+        "toxicity_results": ToxicityResult.objects.filter(
+            tweet__viewedtweet__user=user
+        ),
     }
-    return render(request, "sentiment_results.html", context)
+    return render(request, "full_analysis.html", context)
 
 
 # (PLACEHOLDER - html DOESNT EXIST YET)
@@ -393,15 +400,8 @@ def sentiment_results(request, user_id):
         "sentiment_results": SentimentResult.objects.filter(
             tweet__viewedtweet__user=user
         ),
-        "topic_results": TopicResult.objects.filter(tweet__viewedtweet__user=user),
-        "political_leaning_results": PoliticalLeaningResult.objects.filter(
-            tweet__viewedtweet__user=user
-        ),
-        "toxicity_results": ToxicityResult.objects.filter(
-            tweet__viewedtweet__user=user
-        ),
     }
-    return render(request, "sentiment_results.html", context)
+    return render(request, "sentiment.html", context)
 
 
 # (PLACEHOLDER - html DOESNT EXIST YET)
@@ -412,7 +412,7 @@ def topic_results(request, user_id):
         "user": AppUser.objects.filter(id=user),
         "topic_results": TopicResult.objects.filter(tweet__viewedtweet__user=user),
     }
-    return render(request, "topic_results.html", context)
+    return render(request, "topics.html", context)
 
 
 # (PLACEHOLDER - html DOESNT EXIST YET)
@@ -425,7 +425,7 @@ def political_leaning_results(request, user_id):
             tweet__viewedtweet__user=user
         ),
     }
-    return render(request, "political_leaning_results.html", context)
+    return render(request, "political_leaning.html", context)
 
 
 # (PLACEHOLDER - html DOESNT EXIST YET)
@@ -438,4 +438,4 @@ def toxicity_results(request, user_id):
             tweet__viewedtweet__user=user
         ),
     }
-    return render(request, "toxicity_results.html", context)
+    return render(request, "toxicity.html", context)
