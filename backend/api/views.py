@@ -3,6 +3,7 @@ from django.views.decorators.csrf import csrf_exempt
 from api.models import (
     AppUser,
     BrowseSession,
+    PoliticalLeaningResult,
     SentimentResult,
     TopicResult,
     Tweet,
@@ -11,6 +12,7 @@ from api.models import (
     TwitterAuthor,
     ViewedTweet,
 )
+from api.services.political_leaning import analyze_political_leaning_text
 from api.services.sentiment import analyze_sentiment_text
 from api.services.topic import analyze_topic_text
 from api.services.toxicity import analyze_toxicity_text
@@ -241,7 +243,10 @@ def import_dataset(request):
                 }
             )
 
-            topic_result = analyze_topic_text(tweet.full_text)
+            topic_result = analyze_topic_text(
+                tweet.full_text,
+                url=tweet.source_platform_url or "",
+            )
 
             TopicResult.objects.update_or_create(
                 tweet=tweet,
@@ -251,8 +256,18 @@ def import_dataset(request):
                 }
             )
 
-            tweet.analysis_status = 'complete'
-            tweet.save(update_fields=['analysis_status'])
+            political_leaning_result = analyze_political_leaning_text(tweet.full_text)
+
+            PoliticalLeaningResult.objects.update_or_create(
+                tweet=tweet,
+                defaults={
+                    "leaning": political_leaning_result["leaning"],
+                    "confidence": political_leaning_result["confidence"],
+                },
+            )
+
+            tweet.analysis_status = "complete"
+            tweet.save(update_fields=["analysis_status"])
 
     # -----------------------------------------------------------------------------
     # Step 5 - insert tweet_media
