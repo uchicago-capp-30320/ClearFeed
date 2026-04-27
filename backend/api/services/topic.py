@@ -17,7 +17,7 @@ def get_topic_classifier():
     return _classifier
 
 
-def analyze_topic_text(text):
+def analyze_topic_text(text, url=""):
     # Run the Hugging Face model on one piece of tweet text.
     classifier = get_topic_classifier()
     result = classifier(text)
