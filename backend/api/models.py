@@ -8,7 +8,7 @@ class AppUser(models.Model):
     created_at = models.DateTimeField(auto_now_add=True)
 
     class Meta:
-        db_table = 'app_user'
+        db_table = "app_user"
 
 
 class BrowseSession(models.Model):
@@ -22,23 +22,21 @@ class BrowseSession(models.Model):
     user_agent = models.TextField(null=True)
     # tracks overall session lifecycle
     status = models.TextField(
-        default='ingesting',
+        default="ingesting",
         choices=[
-            ('ingesting', 'ingesting'),    # data being saved to database
-            ('queued', 'queued'),          # ingestion done, analysis job on queue
-            ('analyzing', 'analyzing'),    # worker is processing tweets
-            ('complete', 'complete'),      # all analysis done, results ready
-            ('failed', 'failed'),          # something went wrong
-        ]
+            ("ingesting", "ingesting"),  # data being saved to database
+            ("queued", "queued"),  # ingestion done, analysis job on queue
+            ("analyzing", "analyzing"),  # worker is processing tweets
+            ("complete", "complete"),  # all analysis done, results ready
+            ("failed", "failed"),  # something went wrong
+        ],
     )
     started_at = models.DateTimeField(auto_now_add=True)
     ended_at = models.DateTimeField(null=True)
 
     class Meta:
-        db_table = 'browse_session'
-        indexes = [
-            models.Index(fields=['user'])
-        ]
+        db_table = "browse_session"
+        indexes = [models.Index(fields=["user"])]
 
 
 class TwitterAuthor(models.Model):
@@ -65,10 +63,8 @@ class TwitterAuthor(models.Model):
     last_updated_at = models.DateTimeField(auto_now=True)
 
     class Meta:
-        db_table = 'twitter_author'
-        indexes = [
-            models.Index(fields=['screen_name'])
-        ]
+        db_table = "twitter_author"
+        indexes = [models.Index(fields=["screen_name"])]
 
 
 class Tweet(models.Model):
@@ -112,22 +108,22 @@ class Tweet(models.Model):
     tweet_created_at = models.DateTimeField(null=True)
     # tracks analysis pipeline progress
     analysis_status = models.TextField(
-        default='pending',
+        default="pending",
         choices=[
-            ('pending', 'pending'),        # not yet analyzed
-            ('processing', 'processing'),  # currently being analyzed
-            ('complete', 'complete'),      # all analysis done
-            ('failed', 'failed'),          # analysis attempted but errored
-        ]
+            ("pending", "pending"),  # not yet analyzed
+            ("processing", "processing"),  # currently being analyzed
+            ("complete", "complete"),  # all analysis done
+            ("failed", "failed"),  # analysis attempted but errored
+        ],
     )
 
     class Meta:
-        db_table = 'tweet'
+        db_table = "tweet"
         indexes = [
-            models.Index(fields=['author']),
-            models.Index(fields=['conversation_id']),
-            models.Index(fields=['tweet_created_at']),
-            models.Index(fields=['analysis_status']),
+            models.Index(fields=["author"]),
+            models.Index(fields=["conversation_id"]),
+            models.Index(fields=["tweet_created_at"]),
+            models.Index(fields=["analysis_status"]),
         ]
 
 
@@ -135,11 +131,7 @@ class TweetMedia(models.Model):
     # auto generated UUID
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     # FK to tweet
-    tweet = models.ForeignKey(
-        Tweet,
-        on_delete=models.CASCADE,
-        db_column='tweet_id'
-    )
+    tweet = models.ForeignKey(Tweet, on_delete=models.CASCADE, db_column="tweet_id")
     # e.g. "3_xxx" photo, "7_xxx" video
     media_key = models.TextField(unique=True)
     # photo / video / animated_gif
@@ -155,10 +147,8 @@ class TweetMedia(models.Model):
     created_at = models.DateTimeField(auto_now_add=True)
 
     class Meta:
-        db_table = 'tweet_media'
-        indexes = [
-            models.Index(fields=['tweet'])
-        ]
+        db_table = "tweet_media"
+        indexes = [models.Index(fields=["tweet"])]
 
 
 class ViewedTweet(models.Model):
@@ -173,21 +163,21 @@ class ViewedTweet(models.Model):
     # outer envelope
     timestamp_collected = models.BigIntegerField(null=True)
     # engagement stats at moment of viewing
-    favorite_count = models.IntegerField(null=True)    # data.legacy.favorite_count
-    retweet_count = models.IntegerField(null=True)     # data.legacy.retweet_count
-    reply_count = models.IntegerField(null=True)       # data.legacy.reply_count
-    quote_count = models.IntegerField(null=True)       # data.legacy.quote_count
-    bookmark_count = models.IntegerField(null=True)    # data.legacy.bookmark_count
-    view_count = models.BigIntegerField(null=True)     # data.views.count
+    favorite_count = models.IntegerField(null=True)  # data.legacy.favorite_count
+    retweet_count = models.IntegerField(null=True)  # data.legacy.retweet_count
+    reply_count = models.IntegerField(null=True)  # data.legacy.reply_count
+    quote_count = models.IntegerField(null=True)  # data.legacy.quote_count
+    bookmark_count = models.IntegerField(null=True)  # data.legacy.bookmark_count
+    view_count = models.BigIntegerField(null=True)  # data.views.count
     # entire ndjson record stored as backup
     raw_data = models.JSONField(null=True)
 
     class Meta:
-        db_table = 'viewed_tweet'
+        db_table = "viewed_tweet"
         indexes = [
-            models.Index(fields=['user']),
-            models.Index(fields=['session']),
-            models.Index(fields=['tweet']),
+            models.Index(fields=["user"]),
+            models.Index(fields=["session"]),
+            models.Index(fields=["tweet"]),
         ]
 
 
@@ -201,10 +191,8 @@ class SentimentResult(models.Model):
     analyzed_at = models.DateTimeField(auto_now_add=True)
 
     class Meta:
-        db_table = 'sentiment_result'
-        indexes = [
-            models.Index(fields=['tweet'])
-        ]
+        db_table = "sentiment_result"
+        indexes = [models.Index(fields=["tweet"])]
 
 
 class TopicResult(models.Model):
@@ -217,10 +205,8 @@ class TopicResult(models.Model):
     analyzed_at = models.DateTimeField(auto_now_add=True)
 
     class Meta:
-        db_table = 'topic_result'
-        indexes = [
-            models.Index(fields=['tweet'])
-        ]
+        db_table = "topic_result"
+        indexes = [models.Index(fields=["tweet"])]
 
 
 class PoliticalLeaningResult(models.Model):
@@ -233,10 +219,8 @@ class PoliticalLeaningResult(models.Model):
     analyzed_at = models.DateTimeField(auto_now_add=True)
 
     class Meta:
-        db_table = 'political_leaning_result'
-        indexes = [
-            models.Index(fields=['tweet'])
-        ]
+        db_table = "political_leaning_result"
+        indexes = [models.Index(fields=["tweet"])]
 
 
 class ToxicityResult(models.Model):
@@ -249,7 +233,5 @@ class ToxicityResult(models.Model):
     analyzed_at = models.DateTimeField(auto_now_add=True)
 
     class Meta:
-        db_table = 'toxicity_result'
-        indexes = [
-            models.Index(fields=['tweet'])
-        ]
+        db_table = "toxicity_result"
+        indexes = [models.Index(fields=["tweet"])]
