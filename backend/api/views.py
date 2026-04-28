@@ -2,6 +2,13 @@ from django.http import JsonResponse
 from django.shortcuts import render
 from django.views.decorators.csrf import csrf_exempt
 from api.services.ingestion import ingest_posts
+from .models import (
+    AppUser,
+    SentimentResult,
+    TopicResult,
+    PoliticalLeaningResult,
+    ToxicityResult,
+)
 
 # csrf_exempt is a decorator that wraps the function and disables CSRF protection
 # Request is the incoming HTTP request from the extension containing all the data — headers, body, method etc.
