@@ -30,3 +30,115 @@ def import_dataset(request):
             "posts_received": post_count,
         }
     )
+
+
+# ----------------------------------------------------------------------
+# ADMIN/BACKGROUND views
+# ----------------------------------------------------------------------
+
+
+# PLACEHOLDER home/example endpoint usage (home.html doesn't exist yet)
+def home(request):
+    return render(request, "home.html", {})
+
+
+# PLACEHOLDER login view
+def login(request):
+    return render(request, "login.html", {})
+
+
+# PLACEHOLDER user profile view
+def profile(request, user_id):
+    user = AppUser.objects.filter(id=user_id)
+
+    context = {
+        "user": AppUser.objects.filter(id=user),
+    }
+
+    return render(request, "profile.html", context)
+
+
+# PLACEHOLDER privacy agreement view
+def privacy(request):
+    return render(request, "privacy.html", {})
+
+
+# PLACEHOLDER tutorial view
+def tutorial(request):
+    return render(request, "tutorial.html", {})
+
+
+# ----------------------------------------------------------------------
+# ANALYTICAL views
+# ----------------------------------------------------------------------
+
+
+# comprehensive view for all user-related feed analysis
+def full_analysis(request, user_id):
+    user = AppUser.objects.filter(id=user_id)
+    # user_viewed_tweets = ViewedTweet.objects.filter(user=user).values_list("tweet", flat=True)
+
+    context = {
+        "user": AppUser.objects.filter(id=user),
+        "sentiment_results": SentimentResult.objects.filter(
+            tweet__viewedtweet__user=user
+        ),
+        "topic_results": TopicResult.objects.filter(tweet__viewedtweet__user=user),
+        "political_leaning_results": PoliticalLeaningResult.objects.filter(
+            tweet__viewedtweet__user=user
+        ),
+        "toxicity_results": ToxicityResult.objects.filter(
+            tweet__viewedtweet__user=user
+        ),
+    }
+    return render(request, "full_analysis.html", context)
+
+
+# (PLACEHOLDER - html DOESNT EXIST YET)
+def sentiment_results(request, user_id):
+    user = AppUser.objects.filter(id=user_id)
+
+    context = {
+        "user": AppUser.objects.filter(id=user),
+        "sentiment_results": SentimentResult.objects.filter(
+            tweet__viewedtweet__user=user
+        ),
+    }
+    return render(request, "sentiment.html", context)
+
+
+# (PLACEHOLDER - html DOESNT EXIST YET)
+def topic_results(request, user_id):
+    user = AppUser.objects.filter(id=user_id)
+
+    context = {
+        "user": AppUser.objects.filter(id=user),
+        "topic_results": TopicResult.objects.filter(tweet__viewedtweet__user=user),
+    }
+    return render(request, "topics.html", context)
+
+
+# (PLACEHOLDER - html DOESNT EXIST YET)
+def political_leaning_results(request, user_id):
+    user = AppUser.objects.filter(id=user_id)
+
+    context = {
+        "user": AppUser.objects.filter(id=user),
+        "political_leaning_results": PoliticalLeaningResult.objects.filter(
+            tweet__viewedtweet__user=user
+        ),
+    }
+    return render(request, "political_leaning.html", context)
+
+
+# (PLACEHOLDER - html DOESNT EXIST YET)
+def toxicity_results(request, user_id):
+    user = AppUser.objects.filter(id=user_id)
+
+    context = {
+        "user": AppUser.objects.filter(id=user),
+        "toxicity_results": ToxicityResult.objects.filter(
+            tweet__viewedtweet__user=user
+        ),
+    }
+    return render(request, "toxicity.html", context)
