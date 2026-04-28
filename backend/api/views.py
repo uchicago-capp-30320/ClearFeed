@@ -271,10 +271,7 @@ def import_dataset(request):
                 },
             )
 
-            topic_result = analyze_topic_text(
-                tweet.full_text,
-                url=tweet.source_platform_url or "",
-            )
+            topic_result = analyze_topic_text(tweet.full_text)
 
             TopicResult.objects.update_or_create(
                 tweet=tweet,
