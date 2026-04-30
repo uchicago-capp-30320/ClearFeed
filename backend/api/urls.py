@@ -10,11 +10,6 @@ urlpatterns = [
     path("analysis/", views.full_analysis, name="full_analysis"),
     path("sentiment_results/", views.sentiment_results, name="sentiment_results"),
     path("topic_results/", views.topic_results, name="topic_results"),
-    path(
-        "political_leaning_results/",
-        views.political_leaning_results,
-        name="political_leaning_results",
-    ),
     path("toxicity_results/", views.toxicity_results, name="toxicity_results"),
 ]
 
