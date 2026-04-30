@@ -40,7 +40,7 @@ INSTALLED_APPS = [
     "django.contrib.auth",
     "django.contrib.contenttypes",
     "django.contrib.sessions",
-    'crispy_forms', #using crispy forms for frontend
+    "crispy_forms", #using crispy forms for frontend
     "django.contrib.messages",
     "django.contrib.staticfiles",
     "rest_framework",  # adding Django REST framework to help with building endpoints
