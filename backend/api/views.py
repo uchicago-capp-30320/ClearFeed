@@ -1,6 +1,7 @@
 from django.http import JsonResponse
 from django.shortcuts import render
 from django.views.decorators.csrf import csrf_exempt
+from django.contrib.auth.decorators import login_required
 from api.services.ingestion import ingest_posts
 from .models import (
     AppUser,
@@ -46,13 +47,9 @@ def import_dataset(request):
 
 
 # PLACEHOLDER home/example endpoint usage (home.html doesn't exist yet)
+@login_required
 def home(request):
     return render(request, "home.html", {})
-
-
-# PLACEHOLDER login view
-def login(request):
-    return render(request, "login.html", {})
 
 
 # PLACEHOLDER user profile view

@@ -63,7 +63,7 @@ ROOT_URLCONF = "clearfeed_django.urls"
 TEMPLATES = [
     {
         "BACKEND": "django.template.backends.django.DjangoTemplates",
-        "DIRS": [],
+        "DIRS": [BASE_DIR / "templates"],
         "APP_DIRS": True,
         "OPTIONS": {
             "context_processors": [
@@ -121,3 +121,12 @@ USE_TZ = True
 STATIC_URL = "static/"
 
 CORS_ALLOW_ALL_ORIGINS = True  # JUST FOR NOW FOR LOCAL TESTING
+
+
+# Auth-related direction
+
+LOGIN_REDIRECT_URL = "/"
+
+LOGOUT_REDIRECT_URL = "/"
+
+LOGIN_URL = "/login/"  # where @login_required redirects
