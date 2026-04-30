@@ -40,7 +40,7 @@ INSTALLED_APPS = [
     "django.contrib.auth",
     "django.contrib.contenttypes",
     "django.contrib.sessions",
-    "crispy_forms", # using crispy forms for frontend
+    "crispy_forms",  # using crispy forms for frontend
     "django.contrib.messages",
     "django.contrib.staticfiles",
     "rest_framework",  # adding Django REST framework to help with building endpoints
@@ -132,4 +132,4 @@ LOGOUT_REDIRECT_URL = "/"
 
 LOGIN_URL = "/login/"  # where @login_required redirects
 
-CRISPY_TEMPLATE_PACK = 'bootstrap3' #crispy forms configuration
+CRISPY_TEMPLATE_PACK = "bootstrap3"  # crispy forms configuration
