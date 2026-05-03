@@ -4,13 +4,7 @@ from django.views.decorators.csrf import csrf_exempt
 from api.services.ingestion import ingest_posts, HARDCODED_USER_ID
 from django.db.models import Count
 from django.contrib.auth.decorators import login_required
-from .models import (
-    AppUser,
-    SentimentResult,
-    TopicResult,
-    ToxicityResult,
-    ViewedTweet
-)
+from .models import AppUser, SentimentResult, TopicResult, ToxicityResult, ViewedTweet
 
 # csrf_exempt is a decorator that wraps the function and disables CSRF protection
 # Request is the incoming HTTP request from the extension containing all the data — headers, body, method etc.
