@@ -1,7 +1,7 @@
 from transformers import pipeline
 
 
-MODEL_NAME = "WebOrganizer/TopicClassifier"
+MODEL_NAME = "cardiffnlp/tweet-topic-21-multi"
 _classifier = None
 
 
@@ -9,22 +9,24 @@ def get_topic_classifier():
     # Load the model once, then reuse it for later requests.
     global _classifier
     if _classifier is None:
-        _classifier = pipeline("text-classification", model=MODEL_NAME, top_k=1)
+        _classifier = pipeline(
+            "text-classification",
+            model=MODEL_NAME,
+            top_k=1,
+        )
     return _classifier
 
 
-def analyze_topic_text(text):
+def analyze_topic_text(text, url=""):
     # Run the Hugging Face model on one piece of tweet text.
     classifier = get_topic_classifier()
-    result = classifier(text)[0]
+    result = classifier(text)
 
-    # Output: one topic label such as Adult, Art & Design, Software Dev.,
-    # Crime & Law, Education & Jobs, Hardware, Entertainment, Social Life,
-    # Fashion & Beauty, Finance & Business, Food & Dining, Games, Health,
-    # History, Home & Hobbies, Industrial, Literature, Politics, Religion,
-    # Science & Tech., Software, Sports & Fitness, Transportation, or Travel,
-    # plus a score.
+    # cardiffnlp model with top_k=1 returns [[{'label': ..., 'score': ...}]]
+    # so we need to index into the outer list first
+    top = result[0][0] if isinstance(result[0], list) else result[0]
+
     return {
-        "topic": result["label"].lower(),
-        "confidence": float(result["score"]),
+        "topic": top["label"].lower(),
+        "confidence": float(top["score"]),
     }
