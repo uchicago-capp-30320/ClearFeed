@@ -9,6 +9,7 @@ from .models import (
     SentimentResult,
     TopicResult,
     ToxicityResult,
+    ViewedTweets
 )
 
 # csrf_exempt is a decorator that wraps the function and disables CSRF protection
