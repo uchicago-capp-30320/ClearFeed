@@ -19,7 +19,7 @@ TEST_USERS = {
     "teddy": "b2c3d4e5-f6a7-8901-bcde-f12345678901",
     "yuri": "c3d4e5f6-a7b8-9012-cdef-123456789012",
 }
-HARDCODED_USER_ID = TEST_USERS["yuri"]
+HARDCODED_USER_ID = TEST_USERS["grace"]
 
 
 def ingest_posts(body, platform, user_agent):
