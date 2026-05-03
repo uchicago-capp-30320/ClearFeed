@@ -3,7 +3,13 @@ from django.shortcuts import render
 from django.views.decorators.csrf import csrf_exempt
 from api.services.ingestion import ingest_posts, HARDCODED_USER_ID
 from django.db.models import Count
-from .models import AppUser, SentimentResult, TopicResult, ToxicityResult, ViewedTweet
+from django.contrib.auth.decorators import login_required
+from .models import (
+    AppUser,
+    SentimentResult,
+    TopicResult,
+    ToxicityResult,
+)
 
 # csrf_exempt is a decorator that wraps the function and disables CSRF protection
 # Request is the incoming HTTP request from the extension containing all the data — headers, body, method etc.
@@ -41,13 +47,9 @@ def import_dataset(request):
 
 
 # PLACEHOLDER home/example endpoint usage (home.html doesn't exist yet)
+@login_required
 def home(request):
     return render(request, "home.html", {})
-
-
-# PLACEHOLDER login view
-def login(request):
-    return render(request, "login.html", {})
 
 
 # PLACEHOLDER user profile view
@@ -86,6 +88,7 @@ def full_analysis(request, user_id):
         "sentiment_results": SentimentResult.objects.filter(
             tweet__viewedtweet__user=user
         ),
+        "topic_results": TopicResult.objects.filter(tweet__viewedtweet__user=user),
         "toxicity_results": ToxicityResult.objects.filter(
             tweet__viewedtweet__user=user
         ),
