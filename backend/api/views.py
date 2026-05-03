@@ -1,12 +1,12 @@
 from django.http import JsonResponse
 from django.shortcuts import render
 from django.views.decorators.csrf import csrf_exempt
+from django.contrib.auth.decorators import login_required
 from api.services.ingestion import ingest_posts
 from .models import (
     AppUser,
     SentimentResult,
     TopicResult,
-    PoliticalLeaningResult,
     ToxicityResult,
 )
 
@@ -46,13 +46,9 @@ def import_dataset(request):
 
 
 # PLACEHOLDER home/example endpoint usage (home.html doesn't exist yet)
+@login_required
 def home(request):
     return render(request, "home.html", {})
-
-
-# PLACEHOLDER login view
-def login(request):
-    return render(request, "login.html", {})
 
 
 # PLACEHOLDER user profile view
@@ -92,9 +88,6 @@ def full_analysis(request, user_id):
             tweet__viewedtweet__user=user
         ),
         "topic_results": TopicResult.objects.filter(tweet__viewedtweet__user=user),
-        "political_leaning_results": PoliticalLeaningResult.objects.filter(
-            tweet__viewedtweet__user=user
-        ),
         "toxicity_results": ToxicityResult.objects.filter(
             tweet__viewedtweet__user=user
         ),
@@ -124,19 +117,6 @@ def topic_results(request, user_id):
         "topic_results": TopicResult.objects.filter(tweet__viewedtweet__user=user),
     }
     return render(request, "topics.html", context)
-
-
-# (PLACEHOLDER - html DOESNT EXIST YET)
-def political_leaning_results(request, user_id):
-    user = AppUser.objects.filter(id=user_id)
-
-    context = {
-        "user": AppUser.objects.filter(id=user),
-        "political_leaning_results": PoliticalLeaningResult.objects.filter(
-            tweet__viewedtweet__user=user
-        ),
-    }
-    return render(request, "political_leaning.html", context)
 
 
 # (PLACEHOLDER - html DOESNT EXIST YET)
