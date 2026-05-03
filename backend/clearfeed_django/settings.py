@@ -45,7 +45,7 @@ INSTALLED_APPS = [
     "django.contrib.staticfiles",
     "rest_framework",  # adding Django REST framework to help with building endpoints
     "corsheaders",  # adding CORS library to allow browser extension to make requests to Django server
-    "api",  # adding app so Django recognizes everything in that folder
+    "api.apps.ApiConfig",  # adding app so Django recognizes everything in that folder
 ]
 
 MIDDLEWARE = [
