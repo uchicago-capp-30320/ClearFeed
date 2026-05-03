@@ -4,7 +4,7 @@ from django.apps import AppConfig
 class ApiConfig(AppConfig):
     name = "api"
 
-    def load_models(self):
+    def ready(self):
         """
         Pre-load all ML models when Django starts.
         This avoids timeouts on the first upload request.
