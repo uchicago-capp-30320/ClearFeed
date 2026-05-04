@@ -1,0 +1,227 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Your Promoted Posts</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+            background: #ffffff;
+            min-height: 100vh;
+            padding: 40px 20px;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 60px;
+            align-items: start;
+            padding-top: 40px;
+        }
+
+        .dollar-container {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
+
+        .dollar-svg {
+            width: 100%;
+            max-width: 500px;
+            height: auto;
+            opacity: 0;
+            transition: opacity 0.8s ease-in;
+        }
+
+        .dollar-svg.visible {
+            opacity: 1;
+        }
+
+        .fill-rect {
+            transition: y 2s cubic-bezier(0.65, 0, 0.35, 1),
+                        height 2s cubic-bezier(0.65, 0, 0.35, 1);
+        }
+
+        .text-section {
+            display: flex;
+            flex-direction: column;
+            gap: 50px;
+            font-size: 28px;
+            line-height: 1.4;
+            color: #000;
+        }
+
+        .text-block {
+            opacity: 0;
+            transform: translateY(20px);
+            transition: opacity 0.8s ease-out, transform 0.8s ease-out;
+        }
+
+        .text-block.visible {
+            opacity: 1;
+            transform: translateY(0);
+        }
+
+        .users-list {
+            list-style: none;
+            margin-top: 30px;
+            padding-left: 20px;
+        }
+
+        .users-list li {
+            font-size: 28px;
+            padding: 8px 0;
+            opacity: 0;
+            transform: translateX(-20px);
+            transition: opacity 0.6s ease-out, transform 0.6s ease-out;
+        }
+
+        .users-list li.visible {
+            opacity: 1;
+            transform: translateX(0);
+        }
+
+        @media (max-width: 900px) {
+            .container {
+                grid-template-columns: 1fr;
+                gap: 40px;
+            }
+
+            .dollar-svg {
+                max-width: 280px;
+            }
+
+            .text-section {
+                font-size: 20px;
+            }
+
+            .users-list li {
+                font-size: 20px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="dollar-container">
+            <svg class="dollar-svg" id="dollarSvg" viewBox="0 0 400 500" xmlns="http://www.w3.org/2000/svg">
+                <defs>
+                    <!-- The $ glyph itself acts as the clip path, so the fill exactly matches the dollar sign shape -->
+                    <clipPath id="dollarClip">
+                        <text x="200" y="450"
+                              font-family="Arial Black, Arial, sans-serif"
+                              font-size="500"
+                              font-weight="900"
+                              text-anchor="middle">$</text>
+                    </clipPath>
+                </defs>
+
+                <!-- Dollar sign outline -->
+                <text x="200" y="450"
+                      font-family="Arial Black, Arial, sans-serif"
+                      font-size="500"
+                      font-weight="900"
+                      text-anchor="middle"
+                      fill="none"
+                      stroke="#000"
+                      stroke-width="14"
+                      stroke-linejoin="round">$</text>
+
+                <!-- Animation from the Bottom Up-->
+                <g clip-path="url(#dollarClip)">
+                    <rect class="fill-rect" id="fillRect"
+                          x="0" y="500" width="400" height="0"
+                          fill="#000" />
+                </g>
+            </svg>
+        </div>
+
+        <div class="text-section">
+            <div class="text-block" id="textBlock1">
+                Of the {{ total_tweets|default:"X" }} tweets that you've viewed since {{ since_date|default:"Y" }}, <strong>{{ promoted_percentage|default:"Z" }}%</strong> of them were labeled as Promoted. This includes Posts that the advertiser paid to amplify, a vertical video ad, or a collection ad.
+            </div>
+
+            <div class="text-block" id="textBlock2">
+                The top five users you had promoted to your feed were:
+                <ol class="users-list" id="usersList">
+                    {% for user in top_users %}
+                        <li>{{ forloop.counter }}. {{ user }}</li>
+                    {% empty %}
+                        <li>1. {{top_user_one|default:"top_user_one"}}</li>
+                        <li>2. {{top_user_two|default:"top_user_two"}}r</li>
+                        <li>3. {{top_user_three|default:"top_user_three"}}</li>
+                        <li>4. {{top_user_four|default:"top_user_four"}}</li>
+                        <li>5. {{top_user_five|default:"top_user_five"}}</li>
+                    {% endfor %}
+                </ol>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // const promotedPercentage = {{ promoted_percentage}};
+        // UNCOMMENT THIS OUT AND REPLACE FOR DJANGO IMPLEMENTATION
+        const promotedPercentage = 30;
+
+        document.addEventListener('DOMContentLoaded', function() {
+            const dollarSvg = document.getElementById('dollarSvg');
+            const fillRect = document.getElementById('fillRect');
+            const textBlock1 = document.getElementById('textBlock1');
+            const textBlock2 = document.getElementById('textBlock2');
+            const userItems = document.querySelectorAll('#usersList li');
+
+            const TIMING = {
+                dollarFadeIn: 300,
+                fillStart: 1000,
+                textBlock1: 3300,
+                textBlock2: 4400,
+                usersStart: 5200,
+                userInterval: 500
+            };
+
+            // 1. Dollar sign fades in
+            setTimeout(() => {
+                dollarSvg.classList.add('visible');
+            }, TIMING.dollarFadeIn);
+
+            // 2. Filling of the dollar sign
+            setTimeout(() => {
+                const totalHeight = 500;
+                const fillHeight = (promotedPercentage / 100) * totalHeight; //Starts at the bottom of the $ and goes up
+                fillRect.setAttribute('y', totalHeight - fillHeight);
+                fillRect.setAttribute('height', fillHeight);
+            }, TIMING.fillStart);
+
+            // 3. First paragraph
+            setTimeout(() => {
+                textBlock1.classList.add('visible');
+            }, TIMING.textBlock1);
+
+            // 4. Second paragraph
+            setTimeout(() => {
+                textBlock2.classList.add('visible');
+            }, TIMING.textBlock2);
+
+            // 5. List items reveal bottom-up: #5, #4, #3, #2, #1
+            const itemsArray = Array.from(userItems);
+            const reversedItems = [...itemsArray].reverse();
+
+            reversedItems.forEach((item, i) => {
+                setTimeout(() => {
+                    item.classList.add('visible');
+                }, TIMING.usersStart + (i * TIMING.userInterval));
+            });
+        });
+    </script>
+</body>
+</html>
