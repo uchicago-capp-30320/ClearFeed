@@ -10,7 +10,6 @@ from api.models import (
     SessionStatus,
     AnalysisStatus,
 )
-from api.services.analysis import analyze_tweet
 
 # temporary test users — replace with real auth token from request headers
 # swap HARDCODED_USER_ID to test as different users
@@ -28,6 +27,7 @@ def ingest_posts(body, platform, user_agent):
     Parses NDJSON body
     Returns the completed session.
     Raises ValueError if no valid posts are found.
+    Rolls back upload if failure mid-pipeline
     """
     posts = _parse_ndjson(body)
     if not posts:
@@ -35,9 +35,17 @@ def ingest_posts(body, platform, user_agent):
 
     app_user = _upsert_app_user()
     session = _create_session(app_user, platform, user_agent)
-    _upsert_authors(posts)
-    _insert_tweets(posts, app_user, session)
-    _complete_session(session)
+
+    try:
+        _upsert_authors(posts)
+        _insert_tweets(posts, app_user, session)
+        _complete_session(session)
+    except Exception as e:
+        # Something failed mid-pipeline; delete the session and partially inserted data
+        ViewedTweet.objects.filter(session=session).delete()
+        session.delete
+        print(f"Ingestion failed for session {session.id}: {e}")
+        raise
 
     return session, len(posts)
 
@@ -80,7 +88,7 @@ def _create_session(app_user, platform, user_agent):
         user=app_user,
         platform=platform,
         user_agent=user_agent,
-        status=SessionStatus.INGESTING,
+        status=SessionStatus.QUEUED,
     )
 
 
@@ -227,11 +235,11 @@ def _insert_tweets(posts, app_user, session):
 
         # only run analysis if tweet is new or a previous attempt failed
         # skips tweets already marked complete — models never run twice
-        if tweet.full_text and tweet.analysis_status in [
-            AnalysisStatus.PENDING,
-            AnalysisStatus.FAILED,
-        ]:
-            analyze_tweet(tweet)
+        # if tweet.full_text and tweet.analysis_status in [
+        # AnalysisStatus.PENDING,
+        # AnalysisStatus.FAILED,
+        # ]:
+        # analyze_tweet(tweet)
 
         # Step 5 — insert media
         _insert_media(post, tweet)
@@ -304,5 +312,5 @@ def _complete_session(session):
     When Celery is added this becomes status='queued' and triggers
     analyze_session.delay(str(session.id)) instead.
     """
-    session.status = SessionStatus.COMPLETE
+    session.status = SessionStatus.INGESTED
     session.save()

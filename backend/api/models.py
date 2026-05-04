@@ -3,10 +3,10 @@ from django.db import models
 
 
 class SessionStatus(models.TextChoices):
-    INGESTING = "ingesting", "Ingesting"
-    QUEUED = "queued", "Queued"
+    INGESTED = "ingested", "Ingested"  # data saved, not yet analyzed
+    QUEUED = "queued", "Queued"  # queued for analysis
     ANALYZING = "analyzing", "Analyzing"
-    COMPLETE = "complete", "Complete"
+    COMPLETE = "complete", "Complete"  # fully analyzed
     FAILED = "failed", "Failed"
 
 
@@ -37,7 +37,7 @@ class BrowseSession(models.Model):
     user_agent = models.TextField(null=True)
     # tracks overall session lifecycle
     status = models.TextField(
-        default=SessionStatus.INGESTING,
+        default=SessionStatus.QUEUED,
         choices=SessionStatus.choices,
     )
     created_at = models.DateTimeField(auto_now_add=True)

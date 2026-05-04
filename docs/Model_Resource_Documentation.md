@@ -84,7 +84,7 @@ It groups a batch of tweets collected during one user activity period.
 | `user` | `ForeignKey(AppUser)` | The user who owns this session. |
 | `platform` | `Text` | Source platform, such as `twitter.com` or `x.com`. |
 | `user_agent` | `Text, nullable` | Browser user agent string from the upload request. |
-| `status` | `Text` | Session lifecycle status: `ingesting`, `queued`, `analyzing`, `complete`, `failed`. |
+| `status` | `Text` | Session lifecycle status: `queued`, `analyzing`, `complete`, `failed`. |
 | `started_at` | `DateTime` | Time the session record was created. |
 | `ended_at` | `DateTime, nullable` | Time ingestion or processing finished. |
 

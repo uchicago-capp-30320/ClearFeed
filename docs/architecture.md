@@ -105,7 +105,7 @@ The core of the backend is the `import_dataset` view in `backend/api/views.py`. 
 
 **Step 1 — App User:** Look up or create the user record. Currently uses a hardcoded UUID; will use real auth tokens later.
 
-**Step 2 — Browse Session:** Create a new session record with status `ingesting`. Every upload = one session.
+**Step 2 — Browse Session:** Create a new session record with status `queued`. Every upload = one session.
 
 **Step 3 — Twitter Authors:** For each post, parse the author's profile from `data.core.user_results.result`. If the author already exists in the database, update their mutable fields (followers count, bio, etc.). If they are new, create a full record.
 

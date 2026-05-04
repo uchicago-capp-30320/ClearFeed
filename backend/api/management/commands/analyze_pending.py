@@ -18,6 +18,10 @@ class Command(BaseCommand):
         total = tweets.count()
         self.stdout.write(f"Found {total} tweets to analyze")
 
+        if total == 0:
+            self.stdout.write(self.style.SUCCESS("Nothing to do"))
+            return
+
         for i, tweet in enumerate(tweets, 1):
             self.stdout.write(f"[{i}/{total}] Analyzing tweet {tweet.tweet_id}...")
             analyze_tweet(tweet)

@@ -26,6 +26,9 @@ def import_dataset(request):
         session, post_count = ingest_posts(body, platform, user_agent)
     except ValueError as e:
         return JsonResponse({"error": str(e)}, status=400)
+    except Exception as e:
+        print(f"Ingestion failed: {e}")
+        return JsonResponse({"error": "ingestion failed"}, status=500)
 
     return JsonResponse(
         {
