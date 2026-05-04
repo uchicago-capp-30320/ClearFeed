@@ -2,7 +2,8 @@ from django.http import JsonResponse
 from django.shortcuts import render
 from django.views.decorators.csrf import csrf_exempt
 from api.services.ingestion import ingest_posts, HARDCODED_USER_ID
-from django.db.models import Count
+from django.db.models import Count, Value
+from django.db.models.functions import Coalesce
 from django.contrib.auth.decorators import login_required
 from .models import AppUser, SentimentResult, TopicResult, ToxicityResult, ViewedTweet
 
@@ -143,6 +144,47 @@ def topic_distribution_testing(request):
         {
             "categories": categories,
             "data": data,
+        }
+    )
+
+
+def user_summary_testing(request):
+    """
+    GET /api/promoted/
+
+    Returns high-level viewing stats for the hardcoded test user.
+    """
+    try:
+        user = AppUser.objects.get(id=HARDCODED_USER_ID)
+    except AppUser.DoesNotExist:
+        return JsonResponse({"error": "user not found"}, status=404)
+
+    viewed_tweets = ViewedTweet.objects.filter(user=user)
+    total_tweets = viewed_tweets.count()
+
+    top_users = (
+        viewed_tweets.filter(tweet__author__isnull=False)
+        .annotate(
+            author_name=Coalesce(
+                "tweet__author__screen_name",
+                "tweet__author__display_name",
+                Value("unknown"),
+            )
+        )
+        .values("author_name")
+        .annotate(count=Count("id"))
+        .order_by("-count", "author_name")[:5]
+    )
+
+    promoted_count = viewed_tweets.filter(tweet__promoted=True).count()
+    promoted_percentage = round((promoted_count / total_tweets) * 100) if total_tweets else 0
+
+    return JsonResponse(
+        {
+            "top_users": [row["author_name"] for row in top_users],
+            "total_tweets": total_tweets,
+            "since_date": user.created_at.date().isoformat(),
+            "promoted_percentage": promoted_percentage,
         }
     )
 
