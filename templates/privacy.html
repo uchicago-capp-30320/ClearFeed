@@ -4,18 +4,18 @@
 
 {% block content %}
 <body>
-    ClearFeed is an app about being transparent with social media, and as such, we value our user's trust in us to handle their data properly. 
+    ClearFeed is an app about being transparent with social media, and as such, we value our user's trust in us to handle their data properly.
 
-    ClearFeed operates by using a browser extension to access visible information from user social media feeds that is saved locally to the user's machine. 
+    ClearFeed operates by using a browser extension to access visible information from user social media feeds that is saved locally to the user's machine.
     Information sent to ClearFeed includes posts, information on the authors of the post such as their follower count, the number of favorites of that post,
-    comments, quote tweets, replies, hashtags, mentions, whether a tweet is promoted, and retweets. The browser extension sends this informaton directly to ClearFeed 
+    comments, quote tweets, replies, hashtags, mentions, whether a tweet is promoted, and retweets. The browser extension sends this informaton directly to ClearFeed
     with no intermediary service.
 
-    ClearFeed uses Django authentication to handle user log-in.
+    ClearFeed uses Django authentication to handle the user log-in.
 
     Data submitted to ClearFeed is analyzed via a locally-run LLM model through HuggingFace to analyze macro-level statistics and trends in your social media feed.
-    The models used are a score for hate/non-hate speech, an emotion classifier, and widely used Twitter sentiments classifier. 
-    Because these models are run locally, user data is not sent to an external service or provider. 
+    The models used are a score for hate/non-hate speech, an emotion classifier, and widely used Twitter sentiments classifier.
+    Because these models are run locally, user data is not sent to an external service or provider.
 
     Data sent in ClearFeed is not made public nor is it shared with a third-party service. We do not buy, sell, share, or trade user data. We do not use user
     data for external advertisement.
