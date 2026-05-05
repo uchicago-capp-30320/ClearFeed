@@ -1,3 +1,5 @@
+import re
+
 from django.http import JsonResponse
 from django.shortcuts import render
 from django.views.decorators.csrf import csrf_exempt
@@ -73,6 +75,45 @@ def tutorial(request):
 # ----------------------------------------------------------------------
 
 
+TOPIC_SERIES_NAME = "Topic as a Percent of Tweets"
+
+
+def _format_topic_label(topic):
+    if not topic:
+        return ""
+
+    cleaned = re.sub(r"[_-]+", " ", topic).strip()
+    small_words = {"and", "or", "of", "the", "a", "an", "to", "in", "for", "on", "with"}
+    words = cleaned.split()
+    formatted = []
+    for index, word in enumerate(words):
+        lower = word.lower()
+        if index != 0 and lower in small_words:
+            formatted.append(lower)
+        else:
+            formatted.append(lower[:1].upper() + lower[1:])
+    return " ".join(formatted)
+
+
+def _get_topic_summary(user):
+    tweet_ids = ViewedTweet.objects.filter(user=user).values_list("tweet_id", flat=True)
+
+    topic_counts = (
+        TopicResult.objects.filter(tweet_id__in=tweet_ids)
+        .values("topic")
+        .annotate(count=Count("topic"))
+        .order_by("-count", "topic")[:5]
+    )
+    total = TopicResult.objects.filter(tweet_id__in=tweet_ids).count()
+
+    categories = [_format_topic_label(item["topic"]) for item in topic_counts]
+    data = (
+        [round((item["count"] / total) * 100) for item in topic_counts] if total else []
+    )
+
+    return categories, data
+
+
 # comprehensive view for all user-related feed analysis
 def full_analysis(request, user_id):
     user = AppUser.objects.filter(id=user_id)
@@ -104,6 +145,22 @@ def sentiment_results(request, user_id):
     return render(request, "sentiment.html", context)
 
 
+def topic_results(request, user_id=None):
+    if user_id is None:
+        user_id = request.session.get("user_id") or HARDCODED_USER_ID
+
+    try:
+        user = AppUser.objects.get(id=user_id)
+    except AppUser.DoesNotExist:
+        return JsonResponse({"error": "user not found"}, status=404)
+
+    context = {
+        "user": user,
+        "topic_results": TopicResult.objects.filter(tweet__viewedtweet__user=user),
+    }
+    return render(request, "topic_results.html", context)
+
+
 def topic_distribution_testing(request):
     """
     GET /api/topics/
@@ -116,28 +173,7 @@ def topic_distribution_testing(request):
     except AppUser.DoesNotExist:
         return JsonResponse({"error": "user not found"}, status=404)
 
-    # get tweet_ids that this user has seen
-    tweet_ids = ViewedTweet.objects.filter(user=user).values_list("tweet_id", flat=True)
-
-    # Count topics for all viewed tweets by this user, sorted by most common
-    topics = (
-        TopicResult.objects.filter(tweet_id__in=tweet_ids)
-        .values("topic")
-        .annotate(count=Count("topic"))
-        .order_by("-count")[:5]
-    )
-    # count total number of tweets so can calculate percentages
-    total = TopicResult.objects.filter(tweet_id__in=tweet_ids).count()
-
-    # if user has no analyzed tweets, return empty response
-    if total == 0:
-        return JsonResponse({"categories": [], "data": []})
-
-    # extract the topic label strings
-    categories = [t["topic"] for t in topics]
-
-    # calculate each topic's share of all tweets as a percentage
-    data = [round((t["count"] / total) * 100) for t in topics]
+    categories, data = _get_topic_summary(user)
 
     return JsonResponse(
         {
@@ -164,33 +200,43 @@ def topic_distribution(request):
     except AppUser.DoesNotExist:
         return JsonResponse({"error": "user not found"}, status=404)
 
-    # get tweet_ids that this user has seen
-    tweet_ids = ViewedTweet.objects.filter(user=user).values_list("tweet_id", flat=True)
-
-    # Count topics for all viewed tweets by this user, sorted by most common
-    topics = (
-        TopicResult.objects.filter(tweet_id__in=tweet_ids)
-        .values("topic")
-        .annotate(count=Count("topic"))
-        .order_by("-count")[:5]
-    )
-    # count total number of tweets so can calculate percentages
-    total = TopicResult.objects.filter(tweet_id__in=tweet_ids).count()
-
-    # if user has no analyzed tweets, return empty response
-    if total == 0:
-        return JsonResponse({"categories": [], "data": []})
-
-    # extract the topic label strings
-    categories = [t["topic"] for t in topics]
-
-    # calculate each topic's share of all tweets as a percentage
-    data = [round((t["count"] / total) * 100) for t in topics]
+    categories, data = _get_topic_summary(user)
 
     return JsonResponse(
         {
             "categories": categories,
             "data": data,
+        }
+    )
+
+
+def topic_summary(request):
+    """
+    GET /api/topics-summary/
+
+    Returns the top 5 topics for the current user in the chart format used by
+    the frontend dashboard.
+    """
+    user_id = request.GET.get("user_id") or request.session.get("user_id")
+    if not user_id:
+        return JsonResponse({"error": "not authenticated"}, status=401)
+
+    try:
+        user = AppUser.objects.get(id=user_id)
+    except AppUser.DoesNotExist:
+        return JsonResponse({"error": "user not found"}, status=404)
+
+    categories, data = _get_topic_summary(user)
+
+    return JsonResponse(
+        {
+            "categories": categories,
+            "series": [
+                {
+                    "name": TOPIC_SERIES_NAME,
+                    "data": data,
+                }
+            ],
         }
     )
 
