@@ -18,7 +18,7 @@ from dotenv import load_dotenv
 load_dotenv()
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
-BASE_DIR = Path(__file__).resolve().parent.parent
+BASE_DIR = Path(__file__).resolve().parent.parent  # ClearFeed/backend/
 
 
 # Quick-start development settings - unsuitable for production
@@ -40,6 +40,7 @@ INSTALLED_APPS = [
     "django.contrib.auth",
     "django.contrib.contenttypes",
     "django.contrib.sessions",
+    "crispy_forms",  # using crispy forms for frontend
     "django.contrib.messages",
     "django.contrib.staticfiles",
     "rest_framework",  # adding Django REST framework to help with building endpoints
@@ -63,7 +64,7 @@ ROOT_URLCONF = "clearfeed_django.urls"
 TEMPLATES = [
     {
         "BACKEND": "django.template.backends.django.DjangoTemplates",
-        "DIRS": [],
+        "DIRS": [BASE_DIR.parent / "templates"],
         "APP_DIRS": True,
         "OPTIONS": {
             "context_processors": [
@@ -121,3 +122,14 @@ USE_TZ = True
 STATIC_URL = "static/"
 
 CORS_ALLOW_ALL_ORIGINS = True  # JUST FOR NOW FOR LOCAL TESTING
+
+
+# Auth-related direction
+
+LOGIN_REDIRECT_URL = "/"
+
+LOGOUT_REDIRECT_URL = "/"
+
+LOGIN_URL = "/login/"  # where @login_required redirects
+
+CRISPY_TEMPLATE_PACK = "bootstrap3"  # crispy forms configuration
