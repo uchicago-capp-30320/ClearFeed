@@ -67,6 +67,31 @@ The following endpoints support data ingestion and analysis-related pages within
 
 ---
 
+## `/topics-summary`
+
+### Parameters
+- `user_id`: Primary key for `AppUser` passed either as a query parameter or via session
+
+### Response
+- JSON payload for the topic chart:
+
+```json
+{
+  "categories": ["Entertainment", "Politics", "Sports", "Food", "Travel"],
+  "series": [
+    {
+      "name": "Topic as a Percent of Tweets",
+      "data": [50, 40, 10, 10, 10]
+    }
+  ]
+}
+```
+
+### Template Context Variables
+- None
+
+---
+
 ## `/political_leaning`
 
 ### Parameters
