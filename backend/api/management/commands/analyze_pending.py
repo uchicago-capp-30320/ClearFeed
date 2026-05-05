@@ -11,6 +11,7 @@ class Command(BaseCommand):
             analysis_status__in=[
                 AnalysisStatus.PENDING,
                 AnalysisStatus.FAILED,
+                AnalysisStatus.PROCESSING,  # catches stuck tweets
             ],
             full_text__isnull=False,
         )
