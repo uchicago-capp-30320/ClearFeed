@@ -22,7 +22,7 @@ TEST_USERS = {
 HARDCODED_USER_ID = TEST_USERS["yuri"]
 
 
-def ingest_posts(body, platform, user_agent):
+def ingest_posts(body, platform, user_agent, user):
     """
     Main entry point for the ingestion pipeline.
     Parses NDJSON body
@@ -33,10 +33,9 @@ def ingest_posts(body, platform, user_agent):
     if not posts:
         raise ValueError("no valid posts received")
 
-    app_user = _upsert_app_user()
-    session = _create_session(app_user, platform, user_agent)
+    session = _create_session(user, platform, user_agent)
     _upsert_authors(posts)
-    _insert_tweets(posts, app_user, session)
+    _insert_tweets(posts, user, session)
     _complete_session(session)
 
     return session, len(posts)

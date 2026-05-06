@@ -123,8 +123,12 @@ USE_TZ = True
 
 STATIC_URL = "static/"
 
-CORS_ALLOW_ALL_ORIGINS = True  # JUST FOR NOW FOR LOCAL TESTING
-
+CORS_ALLOW_ALL_ORIGINS = False
+CORS_ALLOW_CREDENTIALS = True
+CORS_ALLOWED_ORIGINS = [
+    "http://localhost:8000",
+    "moz-extension://4c1373d4-e01c-4121-920a-61442bc159b3",
+]
 
 # Auth-related direction
 
