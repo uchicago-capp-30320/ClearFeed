@@ -41,14 +41,13 @@ def import_dataset(request):
 # ----------------------------------------------------------------------
 
 
-# PLACEHOLDER home/example endpoint usage (home.html doesn't exist yet)
 @login_required
 def home(request):
-    return render(request, "home.html", {})
+    return render(request, "home.html")
 
 
 def signup(request):
-    return render(request, "signup.html", {})
+    return render(request, "registration/signup.html", {})
 
 
 # PLACEHOLDER user profile view
