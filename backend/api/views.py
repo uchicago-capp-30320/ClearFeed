@@ -47,6 +47,10 @@ def home(request):
     return render(request, "home.html", {})
 
 
+def signup(request):
+    return render(request, "signup.html", {})
+
+
 # PLACEHOLDER user profile view
 def profile(request, user_id):
     user = AppUser.objects.filter(id=user_id)

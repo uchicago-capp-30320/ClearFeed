@@ -10,7 +10,7 @@ urlpatterns = [
     path("tutorial/", views.tutorial, name="tutorial"),
     path("analysis/", views.full_analysis, name="full_analysis"),
     path("sentiment_results/", views.sentiment_results, name="sentiment_results"),
-    path("topic_results/", views.topic_results, name="topic_results"),
+    path("topic_results/", views.topic_distribution, name="topic_distribution"),
     path("toxicity_results/", views.toxicity_results, name="toxicity_results"),
 ]
 
