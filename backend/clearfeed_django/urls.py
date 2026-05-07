@@ -26,6 +26,7 @@ urlpatterns = [
         "api/", include("api.urls")
     ),  # anything starting with /api/ gets sent to api/urls.py
     # auth-specific routing
+    path("topics-summary/", views.topics_page, name="topics_page"),
     path("login/", auth_views.LoginView.as_view(), name="login"),
     path("logout/", auth_views.LogoutView.as_view(), name="logout"),
     path("signup/", views.signup, name="signup"),
