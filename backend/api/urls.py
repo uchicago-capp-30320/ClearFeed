@@ -3,7 +3,6 @@ from . import views
 
 urlpatterns = [
     path("import-dataset/", views.import_dataset, name="import_dataset"),
-    path("topics/", views.topic_distribution_testing),
     path("topics-summary/", views.topic_summary, name="topic_summary"),
     path("", views.home, name="home"),
     path("profile/", views.profile, name="profile"),
