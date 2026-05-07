@@ -87,6 +87,10 @@ def tutorial(request):
 TOPIC_SERIES_NAME = "Topic as a Percent of Tweets"
 
 
+def topics_page(request):
+    return render(request, "topics.html")
+
+
 def _format_topic_label(topic):
     if not topic:
         return ""
