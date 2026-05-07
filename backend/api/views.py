@@ -3,7 +3,7 @@ import re
 from django.http import JsonResponse
 from django.shortcuts import render
 from django.views.decorators.csrf import csrf_exempt
-from api.services.ingestion import ingest_posts, HARDCODED_USER_ID
+from api.services.ingestion import ingest_posts
 from django.db.models import Count
 from django.contrib.auth.decorators import login_required
 from .models import AppUser, SentimentResult, TopicResult, ToxicityResult, ViewedTweet
@@ -156,7 +156,7 @@ def sentiment_results(request, user_id):
 
 def topic_results(request, user_id=None):
     if user_id is None:
-        user_id = request.session.get("user_id") or HARDCODED_USER_ID
+        user_id = request.session.get("user_id")
 
     try:
         user = AppUser.objects.get(id=user_id)
@@ -170,29 +170,6 @@ def topic_results(request, user_id=None):
     return render(request, "topic_results.html", context)
 
 
-def topic_distribution_testing(request):
-    """
-    GET /api/topics/
-
-    Returns the top 5 topics for a user's feed as percentages.
-    Used to render the animated bar graph on the feed analysis page.
-    """
-    try:
-        user = AppUser.objects.get(id=HARDCODED_USER_ID)
-    except AppUser.DoesNotExist:
-        return JsonResponse({"error": "user not found"}, status=404)
-
-    categories, data = _get_topic_summary(user)
-
-    return JsonResponse(
-        {
-            "categories": categories,
-            "data": data,
-        }
-    )
-
-
-# (Will use once Auth is configured)
 def topic_distribution(request):
     """
     GET /api/topics
@@ -226,16 +203,10 @@ def topic_summary(request):
     Returns the top 5 topics for the current user in the chart format used by
     the frontend dashboard.
     """
-    user_id = request.GET.get("user_id") or request.session.get("user_id")
-    if not user_id:
+    if not request.user.is_authenticated:
         return JsonResponse({"error": "not authenticated"}, status=401)
 
-    try:
-        user = AppUser.objects.get(id=user_id)
-    except AppUser.DoesNotExist:
-        return JsonResponse({"error": "user not found"}, status=404)
-
-    categories, data = _get_topic_summary(user)
+    categories, data = _get_topic_summary(request.user)
 
     return JsonResponse(
         {

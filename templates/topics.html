@@ -11,7 +11,14 @@
 
   </div>
 
+  <script src="https://cdn.jsdelivr.net/npm/echarts@5/dist/echarts.min.js"></script>
+
   <script>
+
+    const COLORS = ['#5470c6', '#91cc75', '#fac858', '#ee6666', '#73c0de'];
+    const baseTextStyle = { color: '#8a8fa8', fontFamily: 'sans-serif' };
+    const baseGrid = { left: '3%', right: '4%', bottom: '3%', containLabel: true };
+
     // Data needs to have this schema when passed to the chart to get it to work
     //   context = {
     //     "categories": ["Jan","Feb","Mar","Apr","May","Jun"],
@@ -23,7 +30,7 @@
 
     async function loadChartData() {
       try {
-        const response = await fetch('/api/topic_summary/');  // Check the address here to make sure it works
+        const response = await fetch('/api/topics-summary/');  // Check the address here to make sure it works
 
         if (!response.ok) {
           throw new Error(`HTTP error! status: ${response.status}`);
@@ -32,7 +39,7 @@
         const data = await response.json();
         // Expected response shape: { "categories": [...], "data": [...] }
 
-        renderChart(data.categories, data.data);
+        renderChart(data.categories, data.series[0].data);
 
       } catch (error) {
         console.error('Failed to load chart data:', error);
