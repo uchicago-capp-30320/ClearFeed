@@ -20,14 +20,20 @@ from .models import AppUser, SentimentResult, TopicResult, ToxicityResult, Viewe
 
 @csrf_exempt
 def import_dataset(request):
+    if not request.user.is_authenticated:
+        return JsonResponse({"error": "not authenticated"}, status=401)
+
     platform = request.headers.get("X-Zeeschuimer-Platform", "unknown")
     user_agent = request.headers.get("User-Agent", None)
     body = request.body.decode("utf-8")
 
     try:
-        session, post_count = ingest_posts(body, platform, user_agent)
+        session, post_count = ingest_posts(body, platform, user_agent, request.user)
     except ValueError as e:
         return JsonResponse({"error": str(e)}, status=400)
+    except Exception as e:
+        print(f"Ingestion failed: {e}")
+        return JsonResponse({"error": "ingestion failed"}, status=500)
 
     return JsonResponse(
         {
@@ -43,10 +49,13 @@ def import_dataset(request):
 # ----------------------------------------------------------------------
 
 
-# PLACEHOLDER home/example endpoint usage (home.html doesn't exist yet)
 @login_required
 def home(request):
-    return render(request, "home.html", {})
+    return render(request, "home.html")
+
+
+def signup(request):
+    return render(request, "registration/signup.html", {})
 
 
 # PLACEHOLDER user profile view

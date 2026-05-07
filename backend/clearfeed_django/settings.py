@@ -40,7 +40,8 @@ INSTALLED_APPS = [
     "django.contrib.auth",
     "django.contrib.contenttypes",
     "django.contrib.sessions",
-    "crispy_forms",  # using crispy forms for frontend
+    "crispy_forms",
+    "crispy_bootstrap3",  # using crispy forms for frontend
     "django.contrib.messages",
     "django.contrib.staticfiles",
     "rest_framework",  # adding Django REST framework to help with building endpoints
@@ -123,7 +124,11 @@ USE_TZ = True
 
 STATIC_URL = "static/"
 
-CORS_ALLOW_ALL_ORIGINS = True  # JUST FOR NOW FOR LOCAL TESTING
+CORS_ALLOW_CREDENTIALS = True
+CORS_ALLOWED_ORIGINS = [
+    "http://localhost:8000",
+    "moz-extension://cfeeb442-cce1-4e03-9099-05a1710fa96f",
+]
 
 
 # Auth-related direction
