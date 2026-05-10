@@ -7,16 +7,17 @@ class Command(BaseCommand):
     help = "Run analysis on all tweets with status pending or failed"
 
     def handle(self, *args, **options):
-        tweets = Tweet.objects.filter(
-            analysis_status__in=[
-                AnalysisStatus.PENDING,
-                AnalysisStatus.FAILED,
-                AnalysisStatus.PROCESSING,  # catches stuck tweets
-            ],
-            full_text__isnull=False,
+        tweets = list(
+            Tweet.objects.filter(
+                analysis_status__in=[
+                    AnalysisStatus.PENDING,
+                    AnalysisStatus.FAILED,
+                ],
+                full_text__isnull=False,
+            )
         )
 
-        total = tweets.count()
+        total = len(tweets)
         self.stdout.write(f"Found {total} tweets to analyze")
 
         if total == 0:
@@ -24,7 +25,7 @@ class Command(BaseCommand):
             return
 
         # find all sessions that have pending tweets and mark them analyzing
-        session_ids = (
+        session_ids = list(
             ViewedTweet.objects.filter(tweet__in=tweets)
             .values_list("session_id", flat=True)
             .distinct()
@@ -44,7 +45,7 @@ class Command(BaseCommand):
         # after all tweet processed, check each session
         for session_id in session_ids:
             session = BrowseSession.objects.get(id=session_id)
-            tweet_ids = (
+            tweet_ids = list(
                 ViewedTweet.objects.filter(session=session)
                 .values_list("tweet_id", flat=True)
                 .distinct()
@@ -55,6 +56,7 @@ class Command(BaseCommand):
                 analysis_status__in=[
                     AnalysisStatus.PENDING,
                     AnalysisStatus.PROCESSING,
+                    AnalysisStatus.FAILED,
                 ],
             ).count()
 
@@ -66,5 +68,7 @@ class Command(BaseCommand):
                 self.stdout.write(
                     f"Session {session_id} → {unfinished} tweets still unfinished"
                 )
+                session.status = SessionStatus.FAILED
+                session.save()
 
         self.stdout.write(self.style.SUCCESS("Done"))

@@ -8,7 +8,6 @@ from django.contrib.auth.models import (
 
 
 class SessionStatus(models.TextChoices):
-    INGESTING = "ingesting", "Ingesting"
     QUEUED = "queued", "Queued"
     ANALYZING = "analyzing", "Analyzing"
     COMPLETE = "complete", "Complete"
@@ -64,7 +63,7 @@ class BrowseSession(models.Model):
     user_agent = models.TextField(null=True)
     # tracks overall session lifecycle
     status = models.TextField(
-        default=SessionStatus.INGESTING,
+        default=SessionStatus.QUEUED,
         choices=SessionStatus.choices,
     )
     created_at = models.DateTimeField(auto_now_add=True)

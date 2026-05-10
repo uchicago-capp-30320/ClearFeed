@@ -97,6 +97,10 @@ def privacy(request):
 TOPIC_SERIES_NAME = "Topic as a Percent of Tweets"
 
 
+def topics_page(request):
+    return render(request, "topics.html")
+
+
 def _format_topic_label(topic):
     if not topic:
         return ""
@@ -167,33 +171,6 @@ def topic_results(request, user_id=None):
     return render(request, "topic_results.html", context)
 
 
-def topic_distribution_testing(request):
-    """
-    GET /api/topics/
-
-    Returns the top 5 topics for a user's feed as percentages.
-    Used to render the animated bar graph on the feed analysis page.
-    """
-    user_id = request.session.get("user_id")
-
-    if not user_id:
-        return JsonResponse({"error": "not authenticated"}, status=401)
-    try:
-        user = AppUser.objects.get(id=user_id)
-    except AppUser.DoesNotExist:
-        return JsonResponse({"error": "user not found"}, status=404)
-
-    categories, data = _get_topic_summary(user)
-
-    return JsonResponse(
-        {
-            "categories": categories,
-            "data": data,
-        }
-    )
-
-
-# (Will use once Auth is configured)
 def topic_distribution(request):
     """
     GET /api/topics
@@ -227,16 +204,10 @@ def topic_summary(request):
     Returns the top 5 topics for the current user in the chart format used by
     the frontend dashboard.
     """
-    user_id = request.GET.get("user_id") or request.session.get("user_id")
-    if not user_id:
+    if not request.user.is_authenticated:
         return JsonResponse({"error": "not authenticated"}, status=401)
 
-    try:
-        user = AppUser.objects.get(id=user_id)
-    except AppUser.DoesNotExist:
-        return JsonResponse({"error": "user not found"}, status=404)
-
-    categories, data = _get_topic_summary(user)
+    categories, data = _get_topic_summary(request.user)
 
     return JsonResponse(
         {

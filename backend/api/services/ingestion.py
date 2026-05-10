@@ -28,7 +28,7 @@ def ingest_posts(body, platform, user_agent, user):
     try:
         _upsert_authors(posts)
         _insert_tweets(posts, user, session)
-        _complete_session(session)
+        _queue_session(session)
     except Exception as e:
         # Something failed mid-pipeline; delete the session and partially inserted data
         ViewedTweet.objects.filter(session=session).delete()
@@ -213,14 +213,6 @@ def _insert_tweets(posts, user, session):
             },
         )
 
-        # only run analysis if tweet is new or a previous attempt failed
-        # skips tweets already marked complete — models never run twice
-        # if tweet.full_text and tweet.analysis_status in [
-        # AnalysisStatus.PENDING,
-        # AnalysisStatus.FAILED,
-        # ]:
-        # analyze_tweet(tweet)
-
         # Step 5 — insert media
         _insert_media(post, tweet)
 
@@ -285,12 +277,10 @@ def _insert_viewed_tweet(post, legacy, tweet, user, session):
 # Step 7 — mark session complete
 
 
-def _complete_session(session):
+def _queue_session(session):
     """
-    Mark the session as complete.
+    After successful ingestion, mark the session as queued for analysis.
     updated_at is set automatically by auto_now=True on the model.
-    When Celery is added this becomes status='queued' and triggers
-    analyze_session.delay(str(session.id)) instead.
     """
-    session.status = SessionStatus.COMPLETE
+    session.status = SessionStatus.QUEUED
     session.save()
