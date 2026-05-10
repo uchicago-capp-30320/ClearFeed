@@ -1,7 +1,6 @@
 import json
 from datetime import datetime, timezone as dt_timezone
 from api.models import (
-    AppUser,
     BrowseSession,
     TwitterAuthor,
     Tweet,
@@ -10,34 +9,32 @@ from api.models import (
     SessionStatus,
     AnalysisStatus,
 )
-from api.services.analysis import analyze_tweet
-
-# temporary test users — replace with real auth token from request headers
-# swap HARDCODED_USER_ID to test as different users
-TEST_USERS = {
-    "grace": "a1b2c3d4-e5f6-7890-abcd-ef1234567890",
-    "teddy": "b2c3d4e5-f6a7-8901-bcde-f12345678901",
-    "yuri": "c3d4e5f6-a7b8-9012-cdef-123456789012",
-}
-HARDCODED_USER_ID = TEST_USERS["yuri"]
 
 
-def ingest_posts(body, platform, user_agent):
+def ingest_posts(body, platform, user_agent, user):
     """
     Main entry point for the ingestion pipeline.
     Parses NDJSON body
     Returns the completed session.
     Raises ValueError if no valid posts are found.
+    Rolls back upload if failure mid-pipeline
     """
     posts = _parse_ndjson(body)
     if not posts:
         raise ValueError("no valid posts received")
 
-    app_user = _upsert_app_user()
-    session = _create_session(app_user, platform, user_agent)
-    _upsert_authors(posts)
-    _insert_tweets(posts, app_user, session)
-    _complete_session(session)
+    session = _create_session(user, platform, user_agent)
+
+    try:
+        _upsert_authors(posts)
+        _insert_tweets(posts, user, session)
+        _complete_session(session)
+    except Exception as e:
+        # Something failed mid-pipeline; delete the session and partially inserted data
+        ViewedTweet.objects.filter(session=session).delete()
+        session.delete()
+        print(f"Ingestion failed for session {session.id}: {e}")
+        raise
 
     return session, len(posts)
 
@@ -62,25 +59,16 @@ def _parse_ndjson(body):
     return posts
 
 
-def _upsert_app_user():
-    """
-    Look up or create the app user.
-    Currently uses a hardcoded UUID — will be replaced with real auth token.
-    """
-    app_user, _ = AppUser.objects.get_or_create(id=HARDCODED_USER_ID)
-    return app_user
-
-
-def _create_session(app_user, platform, user_agent):
+def _create_session(user, platform, user_agent):
     """
     Create a new browse session for this upload.
     Every upload = one session record.
     """
     return BrowseSession.objects.create(
-        user=app_user,
+        user=user,
         platform=platform,
         user_agent=user_agent,
-        status=SessionStatus.INGESTING,
+        status=SessionStatus.QUEUED,
     )
 
 
@@ -159,14 +147,14 @@ def _upsert_authors(posts):
 # Steps 4, 5, 6 — tweets, media, viewed_tweets
 
 
-def _insert_tweets(posts, app_user, session):
+def _insert_tweets(posts, user, session):
     """
     For each post, insert the tweet if new, run analysis if needed,
     insert media, and always insert a viewed_tweet record.
     """
     for post in posts:
         legacy = post.get("data", {}).get("legacy", {})
-        user = (
+        twitter_user = (
             post.get("data", {})
             .get("core", {})
             .get("user_results", {})
@@ -182,7 +170,7 @@ def _insert_tweets(posts, app_user, session):
 
         # look up author we just upserted in Step 3
         author = None
-        author_twitter_id = user.get("rest_id")
+        author_twitter_id = twitter_user.get("rest_id")
         if author_twitter_id:
             try:
                 author = TwitterAuthor.objects.get(author_twitter_id=author_twitter_id)
@@ -227,17 +215,17 @@ def _insert_tweets(posts, app_user, session):
 
         # only run analysis if tweet is new or a previous attempt failed
         # skips tweets already marked complete — models never run twice
-        if tweet.full_text and tweet.analysis_status in [
-            AnalysisStatus.PENDING,
-            AnalysisStatus.FAILED,
-        ]:
-            analyze_tweet(tweet)
+        # if tweet.full_text and tweet.analysis_status in [
+        # AnalysisStatus.PENDING,
+        # AnalysisStatus.FAILED,
+        # ]:
+        # analyze_tweet(tweet)
 
         # Step 5 — insert media
         _insert_media(post, tweet)
 
         # Step 6 — always insert viewed_tweet
-        _insert_viewed_tweet(post, legacy, tweet, app_user, session)
+        _insert_viewed_tweet(post, legacy, tweet, user, session)
 
 
 def _insert_media(post, tweet):
@@ -270,7 +258,7 @@ def _insert_media(post, tweet):
         )
 
 
-def _insert_viewed_tweet(post, legacy, tweet, app_user, session):
+def _insert_viewed_tweet(post, legacy, tweet, user, session):
     """
     Always insert a new viewed_tweet row regardless of whether the tweet
     is new or already existed. Records this user seeing this tweet in this
@@ -279,7 +267,7 @@ def _insert_viewed_tweet(post, legacy, tweet, app_user, session):
     Stores full raw_data as backup for re-parsing if fields are missed.
     """
     ViewedTweet.objects.create(
-        user=app_user,
+        user=user,
         session=session,
         tweet=tweet,
         timestamp_collected=post.get("timestamp_collected"),
