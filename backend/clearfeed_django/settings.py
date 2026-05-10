@@ -13,9 +13,39 @@ https://docs.djangoproject.com/en/6.0/ref/settings/
 import dj_database_url
 from pathlib import Path
 import os
+import sys
+import types
 from dotenv import load_dotenv
 
 load_dotenv()
+
+
+def _base62_encode(value):
+    alphabet = "0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz"
+    if value == 0:
+        return "0"
+
+    encoded = []
+    while value:
+        value, remainder = divmod(value, 62)
+        encoded.append(alphabet[remainder])
+    return "".join(reversed(encoded))
+
+
+def _base62_decode(value):
+    alphabet = "0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz"
+    decoded = 0
+    for char in value:
+        decoded = decoded * 62 + alphabet.index(char)
+    return decoded
+
+
+baseconv_module = types.ModuleType("django.utils.baseconv")
+baseconv_module.base62 = types.SimpleNamespace(
+    encode=_base62_encode,
+    decode=_base62_decode,
+)
+sys.modules.setdefault("django.utils.baseconv", baseconv_module)
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent  # ClearFeed/backend/

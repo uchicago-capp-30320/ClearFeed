@@ -3,6 +3,11 @@ from . import views
 
 urlpatterns = [
     path("import-dataset/", views.import_dataset, name="import_dataset"),
+    path(
+        "sessions/<uuid:session_id>/status/",
+        views.session_status,
+        name="session_status",
+    ),
     path("topics-summary/", views.topic_summary, name="topic_summary"),
     path("", views.home, name="home"),
     path("profile/", views.profile, name="profile"),
