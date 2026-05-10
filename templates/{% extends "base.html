@@ -1,0 +1,335 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block content %}
+
+<style>
+  :root {
+    --cf-blue: #009eed;
+    --cf-dark: #213847;
+    --cf-light-blue: #e8f6fd;
+    --cf-border: #213847;
+    --cf-muted: #5f6f7a;
+    --cf-green: #1f9d55;
+    --cf-warning: #fff3cd;
+    --cf-warning-border: #f0b429;
+    --cf-bg: linear-gradient(180deg, #e7f7ff 0%, #ffffff 42%, #e7f7ff 100%);
+  }
+
+  body {
+    background: var(--cf-bg);
+  }
+
+  .onboarding-wrapper {
+    max-width: 980px;
+    margin: 0 auto;
+    padding: 48px 20px 80px;
+    font-family: Helvetica, Arial, sans-serif;
+    color: var(--cf-dark);
+  }
+
+  .hero-card {
+    background: white;
+    border: 3px solid var(--cf-border);
+    border-radius: 28px;
+    padding: 36px;
+    box-shadow: 0 10px 0 rgba(33, 56, 71, 0.15);
+    text-align: center;
+    margin-bottom: 32px;
+  }
+
+  .hero-logo {
+    width: 110px;
+    margin-bottom: 18px;
+  }
+
+  .hero-card h1 {
+    font-size: 44px;
+    margin: 0 0 12px;
+    font-weight: 800;
+  }
+
+  .hero-card p {
+    font-size: 18px;
+    margin: 0;
+    color: var(--cf-muted);
+  }
+
+  .browser-banner {
+    border-radius: 18px;
+    padding: 18px 22px;
+    margin-bottom: 28px;
+    font-size: 16px;
+    border: 2px solid;
+  }
+
+  .browser-success {
+    background: #e9f8ef;
+    border-color: var(--cf-green);
+    color: #14532d;
+  }
+
+  .browser-warning {
+    background: var(--cf-warning);
+    border-color: var(--cf-warning-border);
+    color: #6b4e00;
+  }
+
+  .step-card {
+    background: white;
+    border: 2px solid var(--cf-border);
+    border-radius: 22px;
+    padding: 26px;
+    margin-bottom: 22px;
+    box-shadow: 0 5px 0 rgba(33, 56, 71, 0.12);
+  }
+
+  .step-header {
+    display: flex;
+    gap: 14px;
+    align-items: center;
+    margin-bottom: 12px;
+  }
+
+  .step-number {
+    background: var(--cf-blue);
+    color: white;
+    border: 2px solid var(--cf-border);
+    border-radius: 50%;
+    width: 38px;
+    height: 38px;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    font-weight: 800;
+  }
+
+  .step-card h2 {
+    margin: 0;
+    font-size: 24px;
+  }
+
+  .step-card p,
+  .step-card li {
+    font-size: 16px;
+    line-height: 1.6;
+  }
+
+  .primary-button,
+  .secondary-button {
+    display: inline-block;
+    margin-top: 14px;
+    padding: 13px 22px;
+    border-radius: 10px;
+    font-weight: 700;
+    text-decoration: none;
+    border: 2px solid var(--cf-border);
+    box-shadow: 0 4px 0 rgba(33, 56, 71, 0.2);
+  }
+
+  .primary-button {
+    background: var(--cf-blue);
+    color: white;
+  }
+
+  .primary-button.disabled {
+    background: #c9d2d8;
+    color: #667782;
+    pointer-events: none;
+    box-shadow: none;
+  }
+
+  .secondary-button {
+    background: white;
+    color: var(--cf-dark);
+  }
+
+  .mini-note {
+    background: var(--cf-light-blue);
+    border-left: 5px solid var(--cf-blue);
+    padding: 14px 16px;
+    border-radius: 10px;
+    margin-top: 14px;
+  }
+
+  .faq-section {
+    margin-top: 36px;
+  }
+
+  .faq-section h2 {
+    font-size: 30px;
+    margin-bottom: 18px;
+  }
+
+  details {
+    background: white;
+    border: 2px solid var(--cf-border);
+    border-radius: 14px;
+    padding: 16px 18px;
+    margin-bottom: 12px;
+  }
+
+  summary {
+    cursor: pointer;
+    font-weight: 800;
+    color: var(--cf-dark);
+  }
+
+  details p {
+    margin-bottom: 0;
+    line-height: 1.6;
+  }
+</style>
+
+<div class="onboarding-wrapper">
+
+  <section class="hero-card">
+    <img src="{% static 'images/clearfeed-logo.png' %}" alt="ClearFeed logo" class="hero-logo">
+    <h1>Welcome to ClearFeed</h1>
+    <p>You're almost ready. Follow these steps to start understanding your Twitter feed.</p>
+  </section>
+
+  <div id="browser-status" class="browser-banner">
+    Checking your browser...
+  </div>
+
+  <section class="step-card">
+    <div class="step-header">
+      <div class="step-number">1</div>
+      <h2>Check your browser</h2>
+    </div>
+    <p>ClearFeed Capture currently works only on Firefox.</p>
+
+    <div id="firefox-help" style="display:none;">
+      <p>
+        You appear to be using a different browser. Please download Firefox, then return to this page in your new Firefox browser.
+      </p>
+      <a class="secondary-button" href="https://www.mozilla.org/en-US/firefox/new/" target="_blank">
+        Download Firefox
+      </a>
+    </div>
+  </section>
+
+  <section class="step-card">
+    <div class="step-header">
+      <div class="step-number">2</div>
+      <h2>Install ClearFeed Capture</h2>
+    </div>
+
+    <p>
+      The extension runs silently in the background while you browse Twitter, capturing what appears in your feed.
+      It never accesses your Twitter password or personal information.
+    </p>
+
+    <a
+      id="install-button"
+      class="primary-button disabled"
+      href="https://github.com/teddykolios11/capp-zeeschuimer/releases/latest/download/62fc9d80cc0f43f29587-1.1.2.xpi"
+    >
+      Install ClearFeed Capture Extension
+    </a>
+
+    <div class="mini-note">
+      Firefox will ask you to confirm the installation. Click <strong>Add</strong>. Once installed, the ClearFeed Capture icon should appear in your Firefox toolbar.
+    </div>
+  </section>
+
+  <section class="step-card">
+    <div class="step-header">
+      <div class="step-number">3</div>
+      <h2>Browse Twitter</h2>
+    </div>
+
+    <p>
+      Open Twitter/X in this same Firefox window and scroll through your home feed.
+      The extension captures tweets automatically.
+    </p>
+
+    <ul>
+      <li>Scroll at your normal pace — do not rush too quickly.</li>
+      <li>Browse for at least <strong>2–3 minutes</strong> for meaningful analysis.</li>
+      <li>The longer you scroll, the longer analysis may take.</li>
+    </ul>
+  </section>
+
+  <section class="step-card">
+    <div class="step-header">
+      <div class="step-number">4</div>
+      <h2>Upload your data</h2>
+    </div>
+
+    <p>
+      When you are done browsing, go back to the ClearFeed Capture tab.
+    </p>
+
+    <ol>
+      <li>Click <strong>To ClearFeed</strong>.</li>
+      <li>Wait for <strong>Upload complete!</strong>.</li>
+    </ol>
+
+    <div class="mini-note">
+      Do not close the browser while uploading. If you do not want to upload your results, click <strong>Delete</strong> instead.
+    </div>
+  </section>
+
+  <section class="step-card">
+    <div class="step-header">
+      <div class="step-number">5</div>
+      <h2>View your results</h2>
+    </div>
+
+    <p>
+      After uploading, ClearFeed analyzes your feed in the background. Results are usually ready within a minute.
+    </p>
+
+    <a class="primary-button" href="{% url 'home' %}">
+      Go to Dashboard
+    </a>
+  </section>
+
+  <section class="faq-section">
+    <h2>FAQ</h2>
+
+    <details>
+      <summary>Why does ClearFeed require Firefox?</summary>
+      <p>The extension uses Firefox's WebExtension API. Chrome and Safari are not currently supported.</p>
+    </details>
+
+    <details>
+      <summary>Does ClearFeed store my Twitter password?</summary>
+      <p>No. ClearFeed only captures tweets that appear on your screen as you scroll. It never accesses your login credentials.</p>
+    </details>
+
+    <details>
+      <summary>Why isn't my analysis showing yet?</summary>
+      <p>Analysis runs in the background after upload. Wait about a minute and refresh the dashboard.</p>
+    </details>
+
+    <details>
+      <summary>Can I upload multiple times?</summary>
+      <p>Yes. Each upload creates a new browsing session. For best results, refresh your feed between browsing sessions.</p>
+    </details>
+  </section>
+
+</div>
+
+<script>
+  const isFirefox = navigator.userAgent.includes("Firefox");
+
+  const browserStatus = document.getElementById("browser-status");
+  const firefoxHelp = document.getElementById("firefox-help");
+  const installButton = document.getElementById("install-button");
+
+  if (isFirefox) {
+    browserStatus.className = "browser-banner browser-success";
+    browserStatus.innerHTML = "✓ You're using Firefox — you're good to go!";
+    installButton.classList.remove("disabled");
+  } else {
+    browserStatus.className = "browser-banner browser-warning";
+    browserStatus.innerHTML = "⚠️ ClearFeed requires Firefox. You appear to be using a different browser.";
+    firefoxHelp.style.display = "block";
+    installButton.classList.add("disabled");
+  }
+</script>
+
+{% endblock %}
