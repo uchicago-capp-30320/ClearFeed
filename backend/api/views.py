@@ -27,6 +27,9 @@ def import_dataset(request):
     user_agent = request.headers.get("User-Agent", None)
     body = request.body.decode("utf-8")
 
+    if not body.strip():
+        return JsonResponse({"error": "empty request body"}, status=400)
+
     try:
         session, post_count = ingest_posts(body, platform, user_agent, request.user)
     except ValueError as e:
@@ -85,10 +88,6 @@ def tutorial(request):
 
 
 TOPIC_SERIES_NAME = "Topic as a Percent of Tweets"
-
-
-def topics_page(request):
-    return render(request, "topics.html")
 
 
 def _format_topic_label(topic):
@@ -207,10 +206,17 @@ def topic_summary(request):
     Returns the top 5 topics for the current user in the chart format used by
     the frontend dashboard.
     """
+    if request.method != "GET":
+        return JsonResponse({"error": "method not allowed"}, status=405)
+
     if not request.user.is_authenticated:
         return JsonResponse({"error": "not authenticated"}, status=401)
 
-    categories, data = _get_topic_summary(request.user)
+    try:
+        categories, data = _get_topic_summary(request.user)
+    except Exception as e:
+        print(f"Topic summary failed for user {request.user.id}: {e}")
+        return JsonResponse({"error": "failed to load topic summary"}, status=500)
 
     return JsonResponse(
         {
