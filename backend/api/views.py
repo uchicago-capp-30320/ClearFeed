@@ -3,7 +3,7 @@ import re
 from django.http import JsonResponse
 from django.shortcuts import render
 from django.views.decorators.csrf import csrf_exempt
-from api.services.ingestion import ingest_posts, HARDCODED_USER_ID
+from api.services.ingestion import ingest_posts
 from django.db.models import Count
 from django.contrib.auth.decorators import login_required
 from .models import AppUser, SentimentResult, TopicResult, ToxicityResult, ViewedTweet
@@ -156,7 +156,7 @@ def sentiment_results(request, user_id):
 
 def topic_results(request, user_id=None):
     if user_id is None:
-        user_id = request.session.get("user_id") or HARDCODED_USER_ID
+        user_id = request.session.get("user_id")
 
     try:
         user = AppUser.objects.get(id=user_id)
@@ -177,8 +177,12 @@ def topic_distribution_testing(request):
     Returns the top 5 topics for a user's feed as percentages.
     Used to render the animated bar graph on the feed analysis page.
     """
+    user_id = request.session.get("user_id")
+
+    if not user_id:
+        return JsonResponse({"error": "not authenticated"}, status=401)
     try:
-        user = AppUser.objects.get(id=HARDCODED_USER_ID)
+        user = AppUser.objects.get(id=user_id)
     except AppUser.DoesNotExist:
         return JsonResponse({"error": "user not found"}, status=404)
 

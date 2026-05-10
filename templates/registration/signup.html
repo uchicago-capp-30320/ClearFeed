@@ -1,21 +1,165 @@
 {% extends "base.html" %}
 {% load crispy_forms_tags %}
+{% load static %}
 
 {% block content %}
 
-<div class="content-section col-md-8 col-md-offset-2">
-  <form method="POST" style="border: 1px solid black; margin: 4%; padding:10%; border-radius:1%;">
-    {% csrf_token %}
-    <fieldset class="form-group">
-      <legend class="border-bottom mb-4">Sign Up</legend>
-      {{ form|crispy}}
-    </fieldset>
-    <center>
-      <button style="background: black; padding:2%; font-size: 2rem; color:white;" class="btn btn-outline-info" type="submit"><span class="glyphicon glyphicon-check"></span>   sign up</button>
-    </center>
-    <br />
-    <sub><a href="{% url 'login' %}" style="text-decoration: none; color: blue; padding:3%; cursor:pointer;">Already have an account?</a></sub>
-  </form>
+<style>
+  :root {
+    --cf-blue: #009eed;
+    --cf-dark: #213847;
+    --cf-muted: #5f6f7a;
+    --cf-light: #e8f6fd;
+  }
+
+  body {
+    background: linear-gradient(180deg, #e7f7ff 0%, #ffffff 45%, #e7f7ff 100%);
+    font-family: Helvetica, Arial, sans-serif;
+    color: var(--cf-dark);
+  }
+
+  .signup-wrapper {
+    min-height: 85vh;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 40px 20px;
+  }
+
+  .signup-card {
+    width: 100%;
+    max-width: 560px;
+    background: white;
+    border: 3px solid var(--cf-dark);
+    border-radius: 28px;
+    padding: 40px 38px;
+    box-shadow: 0 10px 0 rgba(33, 56, 71, 0.14);
+  }
+
+  .signup-logo {
+    width: 95px;
+    display: block;
+    margin: 0 auto 18px;
+  }
+
+  .signup-title {
+    text-align: center;
+    font-size: 42px;
+    font-weight: 800;
+    margin-bottom: 10px;
+  }
+
+  .signup-subtitle {
+    text-align: center;
+    color: var(--cf-muted);
+    font-size: 16px;
+    line-height: 1.6;
+    margin-bottom: 32px;
+  }
+
+  .signup-card input {
+    width: 100%;
+    border: 2px solid var(--cf-dark);
+    border-radius: 12px;
+    padding: 12px 14px;
+    margin-top: 6px;
+    margin-bottom: 16px;
+    font-size: 15px;
+  }
+
+  .signup-card label {
+    font-weight: 700;
+    margin-bottom: 4px;
+  }
+
+  .signup-button {
+    width: 100%;
+    background: var(--cf-blue);
+    color: white;
+    border: 2px solid var(--cf-dark);
+    border-radius: 12px;
+    padding: 14px 18px;
+    font-size: 16px;
+    font-weight: 800;
+    margin-top: 10px;
+    cursor: pointer;
+    box-shadow: 0 4px 0 rgba(33, 56, 71, 0.18);
+  }
+
+  .signup-button:hover {
+    transform: translateY(1px);
+  }
+
+  .login-link {
+    text-align: center;
+    margin-top: 22px;
+    font-size: 15px;
+    color: var(--cf-muted);
+  }
+
+  .login-link a {
+    color: var(--cf-blue);
+    text-decoration: none;
+    font-weight: 700;
+  }
+
+  .login-link a:hover {
+    text-decoration: underline;
+  }
+
+  .helptext {
+    font-size: 13px;
+    color: var(--cf-muted);
+    margin-top: -8px;
+    margin-bottom: 14px;
+  }
+
+  .errorlist {
+    list-style: none;
+    padding: 12px 14px;
+    background: #fde8e8;
+    border: 1px solid #f5b5b5;
+    border-radius: 10px;
+    color: #9b1c1c;
+    margin-bottom: 18px;
+  }
+</style>
+
+<div class="signup-wrapper">
+
+  <div class="signup-card">
+
+    <img
+      src="{% static 'images/clearfeed-logo.png' %}"
+      alt="ClearFeed Logo"
+      class="signup-logo"
+    >
+
+    <h1 class="signup-title">Create account</h1>
+
+    <p class="signup-subtitle">
+      Set up ClearFeed and start understanding your Twitter/X feed.
+    </p>
+
+    <form method="POST">
+      {% csrf_token %}
+
+      {{ form|crispy }}
+
+      <button class="signup-button" type="submit">
+        Create account
+      </button>
+    </form>
+
+    <div class="login-link">
+      Already have an account?
+      <a href="{% url 'login' %}">
+        Sign in
+      </a>
+    </div>
+
+  </div>
+
 </div>
 
 {% endblock content %}
