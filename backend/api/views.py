@@ -1,12 +1,13 @@
 import re
 
 from django.http import JsonResponse
-from django.shortcuts import render
+from django.shortcuts import render, redirect
 from django.views.decorators.csrf import csrf_exempt
 from api.services.ingestion import ingest_posts
 from django.db.models import Count
 from django.contrib.auth.decorators import login_required
 from .models import AppUser, SentimentResult, TopicResult, ToxicityResult, ViewedTweet
+from .forms import AppUserCreationForm
 
 # csrf_exempt is a decorator that wraps the function and disables CSRF protection
 # Request is the incoming HTTP request from the extension containing all the data — headers, body, method etc.
@@ -55,7 +56,21 @@ def home(request):
 
 
 def signup(request):
-    return render(request, "registration/signup.html", {})
+    if request.method == "POST":
+        form = AppUserCreationForm(request.POST)
+
+        if form.is_valid():
+            form.save()
+            return redirect("login")
+
+    else:
+        form = AppUserCreationForm()
+
+    return render(request, "registration/signup.html", {"form": form})
+
+
+def onboarding(request):
+    return render(request, "onboarding.html", {})
 
 
 # PLACEHOLDER user profile view
@@ -72,11 +87,6 @@ def profile(request, user_id):
 # PLACEHOLDER privacy agreement view
 def privacy(request):
     return render(request, "privacy.html", {})
-
-
-# PLACEHOLDER tutorial view
-def tutorial(request):
-    return render(request, "tutorial.html", {})
 
 
 # ----------------------------------------------------------------------
@@ -145,19 +155,6 @@ def full_analysis(request, user_id):
     return render(request, "full_analysis.html", context)
 
 
-# (PLACEHOLDER - html DOESNT EXIST YET)
-def sentiment_results(request, user_id):
-    user = AppUser.objects.filter(id=user_id)
-
-    context = {
-        "user": AppUser.objects.filter(id=user),
-        "sentiment_results": SentimentResult.objects.filter(
-            tweet__viewedtweet__user=user
-        ),
-    }
-    return render(request, "sentiment.html", context)
-
-
 def topic_results(request, user_id=None):
     if user_id is None:
         user_id = request.session.get("user_id")
@@ -223,16 +220,3 @@ def topic_summary(request):
             ],
         }
     )
-
-
-# (PLACEHOLDER - html DOESNT EXIST YET)
-def toxicity_results(request, user_id):
-    user = AppUser.objects.filter(id=user_id)
-
-    context = {
-        "user": AppUser.objects.filter(id=user),
-        "toxicity_results": ToxicityResult.objects.filter(
-            tweet__viewedtweet__user=user
-        ),
-    }
-    return render(request, "toxicity.html", context)
