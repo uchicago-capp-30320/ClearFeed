@@ -3,11 +3,20 @@ import re
 from django.http import JsonResponse
 from django.shortcuts import render, redirect
 from django.views.decorators.csrf import csrf_exempt
+from api.forms import AppUserCreationForm
 from api.services.ingestion import ingest_posts
 from django.db.models import Count
 from django.contrib.auth.decorators import login_required
-from .models import AppUser, SentimentResult, TopicResult, ToxicityResult, ViewedTweet
-from .forms import AppUserCreationForm
+from .models import (
+    AnalysisStatus,
+    AppUser,
+    BrowseSession,
+    SentimentResult,
+    TopicResult,
+    ToxicityResult,
+    Tweet,
+    ViewedTweet,
+)
 
 # csrf_exempt is a decorator that wraps the function and disables CSRF protection
 # Request is the incoming HTTP request from the extension containing all the data — headers, body, method etc.
@@ -41,6 +50,50 @@ def import_dataset(request):
             "status": "success",
             "session_id": str(session.id),
             "posts_received": post_count,
+        }
+    )
+
+
+@csrf_exempt
+def session_status(request, session_id):
+    if not request.user.is_authenticated:
+        return JsonResponse({"error": "not authenticated"}, status=401)
+
+    try:
+        session = BrowseSession.objects.get(id=session_id, user=request.user)
+    except BrowseSession.DoesNotExist:
+        return JsonResponse({"error": "session not found"}, status=404)
+
+    tweet_ids = (
+        ViewedTweet.objects.filter(session=session)
+        .values_list("tweet_id", flat=True)
+        .distinct()
+    )
+    tweet_count = tweet_ids.count()
+    status_counts = {
+        item["analysis_status"]: item["count"]
+        for item in Tweet.objects.filter(tweet_id__in=tweet_ids)
+        .values("analysis_status")
+        .annotate(count=Count("tweet_id", distinct=True))
+    }
+
+    pending_count = status_counts.get(AnalysisStatus.PENDING, 0)
+    processing_count = status_counts.get(AnalysisStatus.PROCESSING, 0)
+    complete_count = status_counts.get(AnalysisStatus.COMPLETE, 0)
+    failed_count = status_counts.get(AnalysisStatus.FAILED, 0)
+    analyzed_count = complete_count + failed_count
+    progress = round((analyzed_count / tweet_count) * 100) if tweet_count else 0
+
+    return JsonResponse(
+        {
+            "session_id": str(session.id),
+            "status": session.status,
+            "tweet_count": tweet_count,
+            "pending_count": pending_count,
+            "processing_count": processing_count,
+            "complete_count": complete_count,
+            "failed_count": failed_count,
+            "progress": progress,
         }
     )
 

@@ -1,5 +1,6 @@
 import json
 from datetime import datetime, timezone as dt_timezone
+from django.db import transaction
 from api.models import (
     BrowseSession,
     TwitterAuthor,
@@ -9,6 +10,7 @@ from api.models import (
     SessionStatus,
     AnalysisStatus,
 )
+from api.tasks import enqueue_session_analysis
 
 
 def ingest_posts(body, platform, user_agent, user):
@@ -23,17 +25,14 @@ def ingest_posts(body, platform, user_agent, user):
     if not posts:
         raise ValueError("no valid posts received")
 
-    session = _create_session(user, platform, user_agent)
-
     try:
-        _upsert_authors(posts)
-        _insert_tweets(posts, user, session)
-        _queue_session(session)
+        with transaction.atomic():
+            session = _create_session(user, platform, user_agent)
+            _upsert_authors(posts)
+            _insert_tweets(posts, user, session)
+            _queue_session(session)
     except Exception as e:
-        # Something failed mid-pipeline; delete the session and partially inserted data
-        ViewedTweet.objects.filter(session=session).delete()
-        session.delete()
-        print(f"Ingestion failed for session {session.id}: {e}")
+        print(f"Ingestion failed: {e}")
         raise
 
     return session, len(posts)
@@ -279,8 +278,10 @@ def _insert_viewed_tweet(post, legacy, tweet, user, session):
 
 def _queue_session(session):
     """
-    After successful ingestion, mark the session as queued for analysis.
+    After successful ingestion, mark the session as queued for analysis and
+    enqueue the async worker once the database transaction commits.
     updated_at is set automatically by auto_now=True on the model.
     """
     session.status = SessionStatus.QUEUED
     session.save()
+    enqueue_session_analysis(session.id)

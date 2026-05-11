@@ -17,6 +17,7 @@ dependencies = [
     "torch>=2.7.0",
     "transformers>=4.51.0",
     "crispy-bootstrap3>=2024.1",
+    "django-q2>=1.10.0",
 ]
 
 [dependency-groups]
