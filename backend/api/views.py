@@ -3,6 +3,7 @@ import re
 from django.http import JsonResponse
 from django.shortcuts import render, redirect
 from django.views.decorators.csrf import csrf_exempt
+from api.forms import AppUserCreationForm
 from api.services.ingestion import ingest_posts
 from django.db.models import Count
 from django.contrib.auth.decorators import login_required
