@@ -10,13 +10,11 @@ urlpatterns = [
     ),
     path("topics-summary/", views.topic_summary, name="topic_summary"),
     path("", views.home, name="home"),
+    path("onboarding/", views.onboarding, name="onboarding"),
     path("profile/", views.profile, name="profile"),
     path("privacy/", views.privacy, name="privacy"),
-    path("tutorial/", views.tutorial, name="tutorial"),
     path("analysis/", views.full_analysis, name="full_analysis"),
-    path("sentiment_results/", views.sentiment_results, name="sentiment_results"),
     path("topic_results/", views.topic_distribution, name="topic_distribution"),
-    path("toxicity_results/", views.toxicity_results, name="toxicity_results"),
 ]
 
 # if the URL is import-dataset/ run the import_dataset function from views.py.
