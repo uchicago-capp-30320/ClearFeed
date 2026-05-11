@@ -27,4 +27,5 @@ jobs:
         run: uv sync --group test
 
       - name: Run tests
-        run: uv run pytest tests
+        working-directory: backend
+        run: uv run python manage.py test api.tests
