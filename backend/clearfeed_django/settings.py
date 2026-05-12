@@ -20,6 +20,7 @@ from dotenv import load_dotenv
 load_dotenv()
 
 
+
 def _base62_encode(value):
     alphabet = "0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz"
     if value == 0:
