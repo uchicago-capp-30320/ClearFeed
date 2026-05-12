@@ -20,7 +20,6 @@ from dotenv import load_dotenv
 load_dotenv()
 
 
-
 def _base62_encode(value):
     alphabet = "0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz"
     if value == 0:
@@ -58,8 +57,7 @@ BASE_DIR = Path(__file__).resolve().parent.parent  # ClearFeed/backend/
 # SECURITY WARNING: keep the secret key used in production secret!
 SECRET_KEY = os.environ.get("SECRET_KEY")
 
-# SECURITY WARNING: don't run with debug turned on in production!
-DEBUG = True
+DEBUG = False
 
 ALLOWED_HOSTS = ["*"]  # ALLOWING ALL ONLY FOR LOCAL DEV TESTING!!
 
