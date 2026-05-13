@@ -1,10 +1,12 @@
 import re
+from collections import Counter
 
 from django.http import JsonResponse
 from django.shortcuts import render, redirect
 from django.views.decorators.csrf import csrf_exempt
 from api.forms import AppUserCreationForm
 from api.services.ingestion import ingest_posts
+from api.services.wordcloud import WORDCLOUD_LIMIT, tokenize_words
 from django.db.models import Count
 from django.contrib.auth.decorators import login_required
 from .models import (
@@ -148,10 +150,16 @@ def privacy(request):
 
 
 TOPIC_SERIES_NAME = "Topic as a Percent of Tweets"
+WORDCLOUD_SERIES_NAME = "Frequency"
 
 
 def topics_page(request):
     return render(request, "topics.html")
+
+
+@login_required
+def wordcloud_page(request):
+    return render(request, "wordcloud.html")
 
 
 def _format_topic_label(topic):
@@ -188,6 +196,31 @@ def _get_topic_summary(user):
     )
 
     return categories, data
+
+
+def _get_wordcloud_summary(user):
+    texts = (
+        Tweet.objects.filter(viewedtweet__user=user)
+        .exclude(full_text__isnull=True)
+        .values_list("full_text", flat=True)
+        .distinct()
+    )
+
+    counts = Counter()
+    for text in texts:
+        counts.update(tokenize_words(text))
+
+    common_words = counts.most_common(WORDCLOUD_LIMIT)
+
+    return {
+        "word": [word for word, _count in common_words],
+        "series": [
+            {
+                "name": WORDCLOUD_SERIES_NAME,
+                "data": [count for _word, count in common_words],
+            }
+        ],
+    }
 
 
 # comprehensive view for all user-related feed analysis
@@ -273,3 +306,16 @@ def topic_summary(request):
             ],
         }
     )
+
+
+def wordcloud_summary(request):
+    """
+    GET /api/wordcloud-summary/
+
+    Returns the current user's most frequent words in the format used by the
+    d3-cloud frontend.
+    """
+    if not request.user.is_authenticated:
+        return JsonResponse({"error": "not authenticated"}, status=401)
+
+    return JsonResponse(_get_wordcloud_summary(request.user))
