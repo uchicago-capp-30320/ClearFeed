@@ -9,6 +9,7 @@ urlpatterns = [
         name="session_status",
     ),
     path("topics-summary/", views.topic_summary, name="topic_summary"),
+    path("feed-summary/", views.feed_summary, name="feed_summary"),
     path("", views.home, name="home"),
     path("onboarding/", views.onboarding, name="onboarding"),
     path("profile/", views.profile, name="profile"),
