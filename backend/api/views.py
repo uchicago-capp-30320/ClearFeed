@@ -173,6 +173,20 @@ def _get_viewed_tweet_ids(user):
     )
 
 
+def _resolve_analysis_user(request):
+    if request.user.is_authenticated:
+        return request.user, None
+
+    user_id = request.session.get("user_id") or request.GET.get("user_id")
+    if not user_id:
+        return None, JsonResponse({"error": "not authenticated"}, status=401)
+
+    try:
+        return AppUser.objects.get(id=user_id), None
+    except (AppUser.DoesNotExist, ValueError):
+        return None, JsonResponse({"error": "user not found"}, status=404)
+
+
 def _format_topic_label(topic):
     if not topic:
         return ""
@@ -351,14 +365,15 @@ def feed_summary(request):
 
     Returns the combined payload used by the scrollable feed analysis view.
     """
-    if not request.user.is_authenticated:
-        return JsonResponse({"error": "not authenticated"}, status=401)
+    user, error_response = _resolve_analysis_user(request)
+    if error_response:
+        return error_response
 
     return JsonResponse(
         {
-            "overview": _get_overview_summary(request.user),
-            "categories": _get_topic_summary(request.user),
-            "word_frequency": _get_word_frequency_summary(request.user),
-            "sentiment": _get_sentiment_summary(request.user),
+            "overview": _get_overview_summary(user),
+            "categories": _get_topic_summary(user),
+            "word_frequency": _get_word_frequency_summary(user),
+            "sentiment": _get_sentiment_summary(user),
         }
     )

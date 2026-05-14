@@ -195,6 +195,23 @@ class FeedSummaryTests(TestCase):
 
         self.assertEqual(response.status_code, 401)
 
+    def test_feed_summary_accepts_session_user_id(self):
+        self.client.logout()
+        session = self.client.session
+        session["user_id"] = str(self.user.id)
+        session.save()
+
+        response = self.client.get("/api/feed-summary/")
+
+        self.assertEqual(response.status_code, 200)
+
+    def test_feed_summary_accepts_query_user_id(self):
+        self.client.logout()
+
+        response = self.client.get("/api/feed-summary/", {"user_id": str(self.user.id)})
+
+        self.assertEqual(response.status_code, 200)
+
 
 class SessionStatusTests(TestCase):
     def setUp(self):
