@@ -1,11 +1,12 @@
 import re
+from collections import Counter
 
 from django.http import JsonResponse
 from django.shortcuts import render, redirect
 from django.views.decorators.csrf import csrf_exempt
 from api.forms import AppUserCreationForm
 from api.services.ingestion import ingest_posts
-from django.db.models import Count
+from django.db.models import Count, Min
 from django.contrib.auth.decorators import login_required
 from .models import (
     AnalysisStatus,
@@ -148,6 +149,70 @@ def privacy(request):
 
 
 TOPIC_SERIES_NAME = "Topic as a Percent of Tweets"
+SENTIMENT_LABELS = ["Negative", "Neutral", "Positive"]
+WORD_FREQUENCY_SERIES_NAME = "Frequency"
+SENTIMENT_SERIES_NAME = "Percentage of Tweets"
+WORD_FREQUENCY_LIMIT = 20
+STOP_WORDS = {
+    "a",
+    "about",
+    "after",
+    "all",
+    "also",
+    "am",
+    "an",
+    "and",
+    "are",
+    "as",
+    "at",
+    "be",
+    "been",
+    "but",
+    "by",
+    "can",
+    "do",
+    "for",
+    "from",
+    "had",
+    "has",
+    "have",
+    "he",
+    "her",
+    "his",
+    "how",
+    "i",
+    "if",
+    "in",
+    "is",
+    "it",
+    "its",
+    "me",
+    "my",
+    "not",
+    "of",
+    "on",
+    "or",
+    "our",
+    "she",
+    "so",
+    "that",
+    "the",
+    "their",
+    "them",
+    "then",
+    "there",
+    "they",
+    "this",
+    "to",
+    "was",
+    "we",
+    "were",
+    "what",
+    "when",
+    "with",
+    "you",
+    "your",
+}
 
 
 def topics_page(request):
@@ -188,6 +253,121 @@ def _get_topic_summary(user):
     )
 
     return categories, data
+
+
+def _get_viewed_tweet_ids(user):
+    return ViewedTweet.objects.filter(user=user).values_list("tweet_id", flat=True)
+
+
+def _get_overview_summary(user):
+    viewed_tweets = Tweet.objects.filter(tweet_id__in=_get_viewed_tweet_ids(user))
+    total_tweets = viewed_tweets.count()
+    promoted_count = viewed_tweets.filter(promoted=True).count()
+    promoted_percentage = (
+        round((promoted_count / total_tweets) * 100) if total_tweets else 0
+    )
+
+    since_date = (
+        ViewedTweet.objects.filter(user=user)
+        .aggregate(first_viewed=Min("created_at"))
+        .get("first_viewed")
+    )
+
+    top_users = [
+        item["author__screen_name"] or item["author__display_name"] or "Unknown"
+        for item in viewed_tweets.filter(promoted=True)
+        .values("author__screen_name", "author__display_name")
+        .annotate(count=Count("tweet_id"))
+        .order_by("-count", "author__screen_name", "author__display_name")[:5]
+    ]
+
+    return {
+        "top_users": top_users,
+        "total_tweets": total_tweets,
+        "since_date": since_date.date().isoformat() if since_date else "",
+        "promoted_percentage": promoted_percentage,
+    }
+
+
+def _get_categories_summary(user):
+    labels, data = _get_topic_summary(user)
+    return {
+        "labels": labels,
+        "series": [
+            {
+                "name": TOPIC_SERIES_NAME,
+                "data": data,
+            }
+        ],
+    }
+
+
+def _tokenize_text(text):
+    without_urls = re.sub(r"https?://\S+|www\.\S+", " ", text or "")
+    without_mentions = re.sub(r"@\w+", " ", without_urls)
+    return re.findall(r"[a-zA-Z][a-zA-Z']{2,}", without_mentions.lower())
+
+
+def _get_word_frequency_summary(user):
+    counter = Counter()
+    for text in Tweet.objects.filter(
+        tweet_id__in=_get_viewed_tweet_ids(user)
+    ).values_list("full_text", flat=True):
+        counter.update(
+            word.strip("'")
+            for word in _tokenize_text(text)
+            if word.strip("'") and word.strip("'") not in STOP_WORDS
+        )
+
+    most_common = counter.most_common(WORD_FREQUENCY_LIMIT)
+    return {
+        "labels": [word for word, _count in most_common],
+        "series": [
+            {
+                "name": WORD_FREQUENCY_SERIES_NAME,
+                "data": [count for _word, count in most_common],
+            }
+        ],
+    }
+
+
+def _get_sentiment_summary(user):
+    counts = {
+        item["sentiment"].lower(): item["count"]
+        for item in SentimentResult.objects.filter(
+            tweet_id__in=_get_viewed_tweet_ids(user)
+        )
+        .values("sentiment")
+        .annotate(count=Count("sentiment"))
+    }
+    negative_count = counts.get("negative", 0)
+    neutral_count = counts.get("neutral", 0)
+    positive_count = counts.get("positive", 0)
+    total = negative_count + neutral_count + positive_count
+
+    data = (
+        [
+            round((negative_count / total) * 100),
+            round((neutral_count / total) * 100),
+            round((positive_count / total) * 100),
+        ]
+        if total
+        else [0, 0, 0]
+    )
+    sentiment_average = (
+        round((positive_count - negative_count) / total, 2) if total else 0
+    )
+
+    return {
+        "sentiment_average": sentiment_average,
+        "labels": SENTIMENT_LABELS,
+        "series": [
+            {
+                "name": SENTIMENT_SERIES_NAME,
+                "data": data,
+            }
+        ],
+    }
 
 
 # comprehensive view for all user-related feed analysis
@@ -271,5 +451,24 @@ def topic_summary(request):
                     "data": data,
                 }
             ],
+        }
+    )
+
+
+def feed_summary(request):
+    """
+    GET /api/feed-summary/
+
+    Returns the combined payload used by the scrollable feed analysis view.
+    """
+    if not request.user.is_authenticated:
+        return JsonResponse({"error": "not authenticated"}, status=401)
+
+    return JsonResponse(
+        {
+            "overview": _get_overview_summary(request.user),
+            "categories": _get_categories_summary(request.user),
+            "word_frequency": _get_word_frequency_summary(request.user),
+            "sentiment": _get_sentiment_summary(request.user),
         }
     )
