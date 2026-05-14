@@ -224,7 +224,7 @@
       class="primary-button disabled"
       href="https://github.com/teddykolios11/capp-zeeschuimer/releases/latest/download/62fc9d80cc0f43f29587-1.1.2.xpi"
     >
-      Install ClearFeed Extension
+      Install ClearFeed Capture Extension
     </a>
 
     <div class="mini-note">
@@ -277,7 +277,7 @@
     </div>
 
     <p>
-      After uploading, ClearFeed analyzes your feed in the background. Results are usually ready within a minute.
+      After uploading, ClearFeed Capture analyzes your feed in the background. Results are usually ready within a minute.
     </p>
 
     <a class="primary-button" href="{% url 'home' %}">
@@ -289,12 +289,12 @@
     <h2>FAQ</h2>
 
     <details>
-      <summary>Why does ClearFeed require Firefox?</summary>
+      <summary>Why does ClearFeed Capture require Firefox?</summary>
       <p>The extension uses Firefox's WebExtension API. Chrome and Safari are not currently supported.</p>
     </details>
 
     <details>
-      <summary>Does ClearFeed store my Twitter password?</summary>
+      <summary>Does ClearFeed Capture store my Twitter password?</summary>
       <p>No. ClearFeed only captures tweets that appear on your screen as you scroll. It never accesses your login credentials.</p>
     </details>
 
@@ -319,7 +319,7 @@
 
   if (isFirefox) {
     browserStatus.className = "browser-banner browser-success";
-    browserStatus.innerHTML = "✓ You're using Firefox — you're good to go!";
+    browserStatus.innerHTML = "You're using Firefox, you're good to go!";
     installButton.classList.remove("disabled");
   } else {
     browserStatus.className = "browser-banner browser-warning";
