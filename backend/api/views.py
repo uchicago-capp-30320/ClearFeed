@@ -111,6 +111,10 @@ def home(request):
     return render(request, "home.html")
 
 
+def landing(request):
+    return render(request, "landing.html")
+
+
 def signup(request):
     if request.method == "POST":
         form = AppUserCreationForm(request.POST)

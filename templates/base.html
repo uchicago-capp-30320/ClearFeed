@@ -53,10 +53,11 @@
             <span class="icon-bar"></span>
             <span class="icon-bar"></span>
           </button>
-          <a class="navbar-brand" href="{% url 'home' %}">ClearFeed</a>
+          <a class="navbar-brand" href="{% url 'landing' %}">ClearFeed</a>
         </div>
         <div class="collapse navbar-collapse" id="mainNavBar">
           <ul class="nav navbar-nav navbar-right">
+            <li><a href="{% url 'privacy' %}">Privacy</a></li>
             <li><a href="{% url 'home' %}">Home</a></li>
 
             {% if user.is_authenticated %}

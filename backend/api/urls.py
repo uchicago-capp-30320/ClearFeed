@@ -17,6 +17,7 @@ urlpatterns = [
     path("analysis/", views.full_analysis, name="full_analysis"),
     path("wordcloud/", views.wordcloud_page, name="wordcloud_page"),
     path("topic_results/", views.topic_results, name="topic_results"),
+    path("landing/", views.landing, name="landing"),
 ]
 
 # if the URL is import-dataset/ run the import_dataset function from views.py.
