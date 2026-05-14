@@ -67,23 +67,50 @@ The following endpoints support data ingestion and analysis-related pages within
 
 ---
 
-## `/topics-summary`
+## `/feed-summary`
 
 ### Parameters
-- `user_id`: Primary key for `AppUser` passed either as a query parameter or via session
+- Authenticated `AppUser` from the current request session
 
 ### Response
-- JSON payload for the topic chart:
+- Combined JSON payload for the scrollable feed analysis view:
 
 ```json
 {
-  "categories": ["Entertainment", "Politics", "Sports", "Food", "Travel"],
-  "series": [
-    {
-      "name": "Topic as a Percent of Tweets",
-      "data": [50, 40, 10, 10, 10]
-    }
-  ]
+  "overview": {
+    "top_users": [],
+    "total_tweets": 0,
+    "since_date": "",
+    "promoted_percentage": 0
+  },
+  "categories": {
+    "labels": ["Cats", "Politics"],
+    "series": [
+      {
+        "name": "Topic as a Percent of Tweets",
+        "data": [67, 33]
+      }
+    ]
+  },
+  "word_frequency": {
+    "labels": ["future", "climate", "policy", "science"],
+    "series": [
+      {
+        "name": "Frequency",
+        "data": [4, 2, 2, 2]
+      }
+    ]
+  },
+  "sentiment": {
+    "sentiment_average": 0,
+    "labels": ["Negative", "Neutral", "Positive"],
+    "series": [
+      {
+        "name": "Percentage of Tweets",
+        "data": [33, 33, 33]
+      }
+    ]
+  }
 }
 ```
 

@@ -1,13 +1,15 @@
-import re
 from collections import Counter
+import re
 
-from django.http import JsonResponse
-from django.shortcuts import render, redirect
-from django.views.decorators.csrf import csrf_exempt
 from api.forms import AppUserCreationForm
 from api.services.ingestion import ingest_posts
-from django.db.models import Count, Min
+from api.services.wordcloud import WORDCLOUD_LIMIT, tokenize_words
 from django.contrib.auth.decorators import login_required
+from django.db.models import Count, Min
+from django.http import JsonResponse
+from django.shortcuts import redirect, render
+from django.views.decorators.csrf import csrf_exempt
+
 from .models import (
     AnalysisStatus,
     AppUser,
@@ -149,74 +151,26 @@ def privacy(request):
 
 
 TOPIC_SERIES_NAME = "Topic as a Percent of Tweets"
-SENTIMENT_LABELS = ["Negative", "Neutral", "Positive"]
 WORD_FREQUENCY_SERIES_NAME = "Frequency"
 SENTIMENT_SERIES_NAME = "Percentage of Tweets"
-WORD_FREQUENCY_LIMIT = 20
-STOP_WORDS = {
-    "a",
-    "about",
-    "after",
-    "all",
-    "also",
-    "am",
-    "an",
-    "and",
-    "are",
-    "as",
-    "at",
-    "be",
-    "been",
-    "but",
-    "by",
-    "can",
-    "do",
-    "for",
-    "from",
-    "had",
-    "has",
-    "have",
-    "he",
-    "her",
-    "his",
-    "how",
-    "i",
-    "if",
-    "in",
-    "is",
-    "it",
-    "its",
-    "me",
-    "my",
-    "not",
-    "of",
-    "on",
-    "or",
-    "our",
-    "she",
-    "so",
-    "that",
-    "the",
-    "their",
-    "them",
-    "then",
-    "there",
-    "they",
-    "this",
-    "to",
-    "was",
-    "we",
-    "were",
-    "what",
-    "when",
-    "with",
-    "you",
-    "your",
-}
+SENTIMENT_LABELS = ["Negative", "Neutral", "Positive"]
 
 
 def topics_page(request):
     return render(request, "topics.html")
+
+
+@login_required
+def wordcloud_page(request):
+    return render(request, "wordcloud.html")
+
+
+def _get_viewed_tweet_ids(user):
+    return (
+        ViewedTweet.objects.filter(user=user)
+        .values_list("tweet_id", flat=True)
+        .distinct()
+    )
 
 
 def _format_topic_label(topic):
@@ -237,7 +191,7 @@ def _format_topic_label(topic):
 
 
 def _get_topic_summary(user):
-    tweet_ids = ViewedTweet.objects.filter(user=user).values_list("tweet_id", flat=True)
+    tweet_ids = _get_viewed_tweet_ids(user)
 
     topic_counts = (
         TopicResult.objects.filter(tweet_id__in=tweet_ids)
@@ -247,20 +201,25 @@ def _get_topic_summary(user):
     )
     total = TopicResult.objects.filter(tweet_id__in=tweet_ids).count()
 
-    categories = [_format_topic_label(item["topic"]) for item in topic_counts]
+    labels = [_format_topic_label(item["topic"]) for item in topic_counts]
     data = (
         [round((item["count"] / total) * 100) for item in topic_counts] if total else []
     )
 
-    return categories, data
-
-
-def _get_viewed_tweet_ids(user):
-    return ViewedTweet.objects.filter(user=user).values_list("tweet_id", flat=True)
+    return {
+        "labels": labels,
+        "series": [
+            {
+                "name": TOPIC_SERIES_NAME,
+                "data": data,
+            }
+        ],
+    }
 
 
 def _get_overview_summary(user):
-    viewed_tweets = Tweet.objects.filter(tweet_id__in=_get_viewed_tweet_ids(user))
+    tweet_ids = _get_viewed_tweet_ids(user)
+    viewed_tweets = Tweet.objects.filter(tweet_id__in=tweet_ids)
     total_tweets = viewed_tweets.count()
     promoted_count = viewed_tweets.filter(promoted=True).count()
     promoted_percentage = (
@@ -289,43 +248,25 @@ def _get_overview_summary(user):
     }
 
 
-def _get_categories_summary(user):
-    labels, data = _get_topic_summary(user)
-    return {
-        "labels": labels,
-        "series": [
-            {
-                "name": TOPIC_SERIES_NAME,
-                "data": data,
-            }
-        ],
-    }
-
-
-def _tokenize_text(text):
-    without_urls = re.sub(r"https?://\S+|www\.\S+", " ", text or "")
-    without_mentions = re.sub(r"@\w+", " ", without_urls)
-    return re.findall(r"[a-zA-Z][a-zA-Z']{2,}", without_mentions.lower())
-
-
 def _get_word_frequency_summary(user):
-    counter = Counter()
-    for text in Tweet.objects.filter(
-        tweet_id__in=_get_viewed_tweet_ids(user)
-    ).values_list("full_text", flat=True):
-        counter.update(
-            word.strip("'")
-            for word in _tokenize_text(text)
-            if word.strip("'") and word.strip("'") not in STOP_WORDS
-        )
+    texts = (
+        Tweet.objects.filter(tweet_id__in=_get_viewed_tweet_ids(user))
+        .exclude(full_text__isnull=True)
+        .values_list("full_text", flat=True)
+    )
 
-    most_common = counter.most_common(WORD_FREQUENCY_LIMIT)
+    counts = Counter()
+    for text in texts:
+        counts.update(tokenize_words(text))
+
+    common_words = counts.most_common(WORDCLOUD_LIMIT)
+
     return {
-        "labels": [word for word, _count in most_common],
+        "labels": [word for word, _count in common_words],
         "series": [
             {
                 "name": WORD_FREQUENCY_SERIES_NAME,
-                "data": [count for _word, count in most_common],
+                "data": [count for _word, count in common_words],
             }
         ],
     }
@@ -404,57 +345,6 @@ def topic_results(request, user_id=None):
     return render(request, "topic_results.html", context)
 
 
-def topic_distribution(request):
-    """
-    GET /api/topics
-
-    Returns the top 5 topics for a user's feed as percentages.
-    Used to render the animated bar graph on the feed analysis page.
-    """
-    user_id = request.session.get("user_id")
-    if not user_id:
-        return JsonResponse({"error": "not authenticated"}, status=401)
-
-    try:
-        user = AppUser.objects.get(id=user_id)
-    except AppUser.DoesNotExist:
-        return JsonResponse({"error": "user not found"}, status=404)
-
-    categories, data = _get_topic_summary(user)
-
-    return JsonResponse(
-        {
-            "categories": categories,
-            "data": data,
-        }
-    )
-
-
-def topic_summary(request):
-    """
-    GET /api/topics-summary/
-
-    Returns the top 5 topics for the current user in the chart format used by
-    the frontend dashboard.
-    """
-    if not request.user.is_authenticated:
-        return JsonResponse({"error": "not authenticated"}, status=401)
-
-    categories, data = _get_topic_summary(request.user)
-
-    return JsonResponse(
-        {
-            "categories": categories,
-            "series": [
-                {
-                    "name": TOPIC_SERIES_NAME,
-                    "data": data,
-                }
-            ],
-        }
-    )
-
-
 def feed_summary(request):
     """
     GET /api/feed-summary/
@@ -467,7 +357,7 @@ def feed_summary(request):
     return JsonResponse(
         {
             "overview": _get_overview_summary(request.user),
-            "categories": _get_categories_summary(request.user),
+            "categories": _get_topic_summary(request.user),
             "word_frequency": _get_word_frequency_summary(request.user),
             "sentiment": _get_sentiment_summary(request.user),
         }
