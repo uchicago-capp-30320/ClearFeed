@@ -59,7 +59,11 @@ SECRET_KEY = os.environ.get("SECRET_KEY")
 
 DEBUG = False
 
-ALLOWED_HOSTS = ["*"]  # ALLOWING ALL ONLY FOR LOCAL DEV TESTING!!
+CSRF_TRUSTED_ORIGINS = [
+    "https://clearfeed.civic.garden",
+]
+
+ALLOWED_HOSTS = os.environ.get('ALLOWED_HOSTS', '').split(',')
 
 
 # Application definition
