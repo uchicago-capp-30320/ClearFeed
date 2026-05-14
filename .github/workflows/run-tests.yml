@@ -8,6 +8,22 @@ on:
 jobs:
   test:
     runs-on: ubuntu-latest
+
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_DB: clearfeed_test
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd="pg_isready -U postgres"
+          --health-interval=10s
+          --health-timeout=5s
+          --health-retries=5
+
     strategy:
       fail-fast: false
       matrix:
@@ -27,4 +43,8 @@ jobs:
         run: uv sync --group test
 
       - name: Run tests
-        run: uv run pytest tests
+        working-directory: backend
+        env:
+          SECRET_KEY: test-secret-key-not-for-production
+          DATABASE_URL: postgres://postgres:postgres@localhost:5432/clearfeed_test
+        run: uv run python manage.py test api.tests --noinput
