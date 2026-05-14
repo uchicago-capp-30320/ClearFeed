@@ -277,7 +277,7 @@
     </div>
 
     <p>
-      After uploading, ClearFeed analyzes your feed in the background. Results are usually ready within a minute.
+      After uploading, ClearFeed Capture analyzes your feed in the background. Results are usually ready within a minute.
     </p>
 
     <a class="primary-button" href="{% url 'home' %}">
@@ -294,8 +294,8 @@
     </details>
 
     <details>
-      <summary>Does ClearFeed store my Twitter password?</summary>
-      <p>No. ClearFeed only captures tweets that appear on your screen as you scroll. It never accesses your login credentials.</p>
+      <summary>Does ClearFeed Capture store my Twitter password?</summary>
+      <p>No. ClearFeed Capture only captures tweets that appear on your screen as you scroll. It never accesses your login credentials.</p>
     </details>
 
     <details>
@@ -319,7 +319,7 @@
 
   if (isFirefox) {
     browserStatus.className = "browser-banner browser-success";
-    browserStatus.innerHTML = "✓ You're using Firefox — you're good to go!";
+    browserStatus.innerHTML = "You're using Firefox, you're good to go!";
     installButton.classList.remove("disabled");
   } else {
     browserStatus.className = "browser-banner browser-warning";
