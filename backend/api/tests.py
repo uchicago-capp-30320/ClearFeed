@@ -5,69 +5,212 @@ from .models import (
     AnalysisStatus,
     AppUser,
     BrowseSession,
+    SentimentResult,
     TopicResult,
+    TwitterAuthor,
     Tweet,
     ViewedTweet,
 )
 
 
-class TopicSummaryTests(TestCase):
+class FeedSummaryTests(TestCase):
     def setUp(self):
         self.user = AppUser.objects.create()
+        self.other_user = AppUser.objects.create(email="other@example.com")
         self.session = BrowseSession.objects.create(
             user=self.user,
             platform="x",
             user_agent="test-agent",
         )
+        self.other_session = BrowseSession.objects.create(
+            user=self.other_user,
+            platform="x",
+            user_agent="test-agent",
+        )
+        self.author = TwitterAuthor.objects.create(
+            author_twitter_id="author-1",
+            screen_name="promoted_user",
+            display_name="Promoted User",
+        )
+        self.client.force_login(self.user)
 
-    def _add_tweets(self, topic, count):
-        for index in range(count):
-            tweet = Tweet.objects.create(
-                tweet_id=f"{topic}-{index}",
-                full_text=f"{topic} tweet {index}",
-            )
-            TopicResult.objects.create(tweet=tweet, topic=topic)
-            ViewedTweet.objects.create(
-                user=self.user,
-                session=self.session,
-                tweet=tweet,
-            )
+    def _add_tweet(
+        self,
+        tweet_id,
+        text,
+        topic,
+        sentiment,
+        promoted=False,
+        author=None,
+        user=None,
+        session=None,
+    ):
+        user = user or self.user
+        session = session or self.session
+        tweet = Tweet.objects.create(
+            tweet_id=tweet_id,
+            author=author,
+            full_text=text,
+            promoted=promoted,
+        )
+        TopicResult.objects.create(tweet=tweet, topic=topic)
+        SentimentResult.objects.create(tweet=tweet, sentiment=sentiment)
+        ViewedTweet.objects.create(
+            user=user,
+            session=session,
+            tweet=tweet,
+        )
+        return tweet
 
-    def test_topic_summary_returns_chart_payload(self):
-        self._add_tweets("cats", 10)
-        self._add_tweets("politics", 8)
-        self._add_tweets("basketball", 2)
-        self._add_tweets("family_and_friends", 2)
-        self._add_tweets("weddings", 2)
-
-        response = self.client.get(
-            reverse("topic_summary"), {"user_id": str(self.user.id)}
+    def test_feed_summary_combines_scrollable_payload(self):
+        self._add_tweet(
+            "tweet-1",
+            "Future climate policy future",
+            "cats",
+            "positive",
+            promoted=True,
+            author=self.author,
+        )
+        self._add_tweet(
+            "tweet-2",
+            "Climate science future",
+            "politics",
+            "negative",
+        )
+        self._add_tweet(
+            "tweet-3",
+            "Policy science future",
+            "cats",
+            "neutral",
+        )
+        self._add_tweet(
+            "other-tweet",
+            "unrelated unrelated unrelated",
+            "noise",
+            "positive",
+            user=self.other_user,
+            session=self.other_session,
         )
 
+        response = self.client.get("/api/feed-summary/")
+
         self.assertEqual(response.status_code, 200)
+        payload = response.json()
         self.assertEqual(
-            response.json(),
+            payload["overview"],
             {
-                "categories": [
-                    "Cats",
-                    "Politics",
-                    "Basketball",
-                    "Family and Friends",
-                    "Weddings",
-                ],
+                "top_users": ["promoted_user"],
+                "total_tweets": 3,
+                "since_date": payload["overview"]["since_date"],
+                "promoted_percentage": 33,
+            },
+        )
+        self.assertRegex(payload["overview"]["since_date"], r"^\d{4}-\d{2}-\d{2}$")
+        self.assertEqual(
+            payload["categories"],
+            {
+                "labels": ["Cats", "Politics"],
                 "series": [
                     {
                         "name": "Topic as a Percent of Tweets",
-                        "data": [42, 33, 8, 8, 8],
+                        "data": [67, 33],
+                    }
+                ],
+            },
+        )
+        self.assertEqual(
+            payload["word_frequency"],
+            {
+                "labels": ["future", "climate", "policy", "science"],
+                "series": [
+                    {
+                        "name": "Frequency",
+                        "data": [4, 2, 2, 2],
+                    }
+                ],
+            },
+        )
+        self.assertEqual(
+            payload["sentiment"],
+            {
+                "sentiment_average": 0.0,
+                "labels": ["Negative", "Neutral", "Positive"],
+                "series": [
+                    {
+                        "name": "Percentage of Tweets",
+                        "data": [33, 33, 33],
                     }
                 ],
             },
         )
 
-    def test_topic_summary_requires_user(self):
-        response = self.client.get(reverse("topic_summary"))
+    def test_feed_summary_returns_empty_payload_without_tweets(self):
+        response = self.client.get("/api/feed-summary/")
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(
+            response.json(),
+            {
+                "overview": {
+                    "top_users": [],
+                    "total_tweets": 0,
+                    "since_date": "",
+                    "promoted_percentage": 0,
+                },
+                "categories": {
+                    "labels": [],
+                    "series": [
+                        {
+                            "name": "Topic as a Percent of Tweets",
+                            "data": [],
+                        }
+                    ],
+                },
+                "word_frequency": {
+                    "labels": [],
+                    "series": [
+                        {
+                            "name": "Frequency",
+                            "data": [],
+                        }
+                    ],
+                },
+                "sentiment": {
+                    "sentiment_average": 0,
+                    "labels": ["Negative", "Neutral", "Positive"],
+                    "series": [
+                        {
+                            "name": "Percentage of Tweets",
+                            "data": [0, 0, 0],
+                        }
+                    ],
+                },
+            },
+        )
+
+    def test_feed_summary_requires_authentication(self):
+        self.client.logout()
+
+        response = self.client.get("/api/feed-summary/")
 
         self.assertEqual(response.status_code, 401)
+
+    def test_feed_summary_accepts_session_user_id(self):
+        self.client.logout()
+        session = self.client.session
+        session["user_id"] = str(self.user.id)
+        session.save()
+
+        response = self.client.get("/api/feed-summary/")
+
+        self.assertEqual(response.status_code, 200)
+
+    def test_feed_summary_accepts_query_user_id(self):
+        self.client.logout()
+
+        response = self.client.get("/api/feed-summary/", {"user_id": str(self.user.id)})
+
+        self.assertEqual(response.status_code, 200)
 
 
 class SessionStatusTests(TestCase):
