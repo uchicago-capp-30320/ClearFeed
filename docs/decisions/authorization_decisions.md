@@ -100,8 +100,8 @@ django.contrib.auth.views
 | `/login/` | Django login authentication view |
 | `/logout/` | Django logout authentication view |
 | `/signup/` | Custom user registration flow |
-The signup route is connected to the custom signup logic implemented in:
 
+The signup route is connected to the custom signup logic implemented in:
 ```python
 backend/api/views.py
 ```
@@ -128,6 +128,7 @@ Integrates the custom `AppUser` model with Django’s built-in authentication fr
 LOGIN_URL
 ```
 Defines the default redirect route for views requiring authentication.
+
 ---
 
 #### Redirect Configuration
