@@ -281,7 +281,7 @@ class LLMAnalysisRun(models.Model):
     class Meta:
         db_table = "llm_analysis_run"
         indexes = [
-            models.Index(fields=["user"], name="llm_analysis_run_user_idx"),
-            models.Index(fields=["status"], name="llm_analysis_run_status_idx"),
-            models.Index(fields=["created_at"], name="llm_analysis_run_created_at_idx"),
+            models.Index(fields=["user"], name="llm_run_user_idx"),
+            models.Index(fields=["status"], name="llm_run_status_idx"),
+            models.Index(fields=["created_at"], name="llm_run_created_idx"),
         ]
