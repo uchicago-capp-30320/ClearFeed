@@ -1,10 +1,13 @@
 from django.test import TestCase
 from django.urls import reverse
+from unittest.mock import patch
 
 from .models import (
     AnalysisStatus,
     AppUser,
     BrowseSession,
+    LLMAnalysisRun,
+    LLMAnalysisStatus,
     SentimentResult,
     TopicResult,
     TwitterAuthor,
@@ -12,6 +15,7 @@ from .models import (
     ViewedTweet,
 )
 from .services.llm_sampling import sample_user_tweets
+from .services.llm_analysis_runner import run_user_llm_analysis
 
 
 class FeedSummaryTests(TestCase):
@@ -365,3 +369,143 @@ class LlmSamplingTests(TestCase):
 
         self.assertEqual(len(sample), 1)
         self.assertEqual(sample[0]["tweet_id"], "tweet-1")
+
+
+class LlmAnalysisRunnerTests(TestCase):
+    def setUp(self):
+        self.user = AppUser.objects.create()
+        self.session = BrowseSession.objects.create(
+            user=self.user,
+            platform="x",
+            user_agent="test-agent",
+        )
+        self.author = TwitterAuthor.objects.create(
+            author_twitter_id="author-1",
+            screen_name="alice",
+            display_name="Alice",
+        )
+
+    def _add_tweet(self, tweet_id, text):
+        tweet = Tweet.objects.create(
+            tweet_id=tweet_id,
+            author=self.author,
+            full_text=text,
+        )
+        ViewedTweet.objects.create(
+            user=self.user,
+            session=self.session,
+            tweet=tweet,
+        )
+
+    def test_run_user_llm_analysis_persists_complete_result(self):
+        self._add_tweet("tweet-1", "Climate policy and clean energy")
+        self._add_tweet("tweet-2", "Transit delays and city updates")
+
+        with patch(
+            "api.services.llm_analysis_runner.analyze_sampled_tweets",
+            return_value={
+                "model_name": "google/flan-t5-small",
+                "prompt_version": "v1",
+                "raw_output": '{"title":"Feed pulse"}',
+                "analysis": {
+                    "title": "Feed pulse",
+                    "themes": ["policy"],
+                    "patterns": ["replies"],
+                    "surprises": ["dense"],
+                    "follow_up_question": "What else?",
+                },
+                "parse_status": "ok",
+            },
+        ):
+            run = run_user_llm_analysis(self.user, sample_size=10, seed=3)
+
+        persisted = LLMAnalysisRun.objects.get(id=run.id)
+        self.assertEqual(persisted.status, LLMAnalysisStatus.COMPLETE)
+        self.assertEqual(persisted.sample_metadata["sample_size"], 2)
+        self.assertEqual(len(persisted.sample_metadata["tweet_ids"]), 2)
+        self.assertEqual(persisted.result["title"], "Feed pulse")
+        self.assertEqual(persisted.model_name, "google/flan-t5-small")
+        self.assertEqual(persisted.prompt_version, "v1")
+
+    def test_run_user_llm_analysis_marks_failed_when_no_tweets_exist(self):
+        with self.assertRaises(ValueError):
+            run_user_llm_analysis(self.user, sample_size=10, seed=3)
+
+        run = LLMAnalysisRun.objects.get(user=self.user)
+        self.assertEqual(run.status, LLMAnalysisStatus.FAILED)
+        self.assertEqual(run.error_message, "no tweets available for analysis")
+
+
+class LlmAnalysisEndpointTests(TestCase):
+    def setUp(self):
+        self.user = AppUser.objects.create()
+        self.other_user = AppUser.objects.create(email="other@example.com")
+        self.session = BrowseSession.objects.create(
+            user=self.user,
+            platform="x",
+            user_agent="test-agent",
+        )
+        self.author = TwitterAuthor.objects.create(
+            author_twitter_id="author-1",
+            screen_name="alice",
+            display_name="Alice",
+        )
+        self.client.force_login(self.user)
+
+    def _add_tweet(self, tweet_id, text):
+        tweet = Tweet.objects.create(
+            tweet_id=tweet_id,
+            author=self.author,
+            full_text=text,
+        )
+        ViewedTweet.objects.create(
+            user=self.user,
+            session=self.session,
+            tweet=tweet,
+        )
+
+    def test_start_run_endpoint_creates_run(self):
+        self._add_tweet("tweet-1", "Climate policy and clean energy")
+
+        with patch(
+            "api.views.run_user_llm_analysis",
+            return_value=LLMAnalysisRun.objects.create(
+                user=self.user,
+                status=LLMAnalysisStatus.COMPLETE,
+                sample_size=10,
+                sample_seed=None,
+                model_name="google/flan-t5-small",
+                prompt_version="v1",
+                sample_metadata={"sample_size": 1, "tweet_ids": ["tweet-1"]},
+                result={"title": "Feed pulse"},
+                raw_output='{"title":"Feed pulse"}',
+            ),
+        ):
+            response = self.client.post(
+                reverse("llm_analysis_runs"),
+                {"sample_size": 10},
+            )
+
+        self.assertEqual(response.status_code, 201)
+        payload = response.json()
+        self.assertEqual(payload["status"], "complete")
+        self.assertEqual(payload["sample_size"], 10)
+
+    def test_run_detail_endpoint_rejects_other_users_runs(self):
+        run = LLMAnalysisRun.objects.create(
+            user=self.other_user,
+            status=LLMAnalysisStatus.COMPLETE,
+            sample_size=10,
+            sample_seed=None,
+            model_name="google/flan-t5-small",
+            prompt_version="v1",
+            sample_metadata={},
+            result={},
+            raw_output="",
+        )
+
+        response = self.client.get(
+            reverse("llm_analysis_run_detail", kwargs={"run_id": run.id})
+        )
+
+        self.assertEqual(response.status_code, 404)
