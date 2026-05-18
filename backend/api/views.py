@@ -4,6 +4,7 @@ import re
 from api.forms import AppUserCreationForm
 from api.services.ingestion import ingest_posts
 from api.services.wordcloud import WORDCLOUD_LIMIT, tokenize_words
+from django.contrib.auth import login
 from django.contrib.auth.decorators import login_required
 from django.db.models import Count, Min
 from django.http import JsonResponse
@@ -120,8 +121,11 @@ def signup(request):
         form = AppUserCreationForm(request.POST)
 
         if form.is_valid():
-            form.save()
-            return redirect("login")
+            user = form.save()
+
+            login(request, user)  # automatically sign in user after sign up
+
+            return redirect("onboarding")
 
     else:
         form = AppUserCreationForm()
