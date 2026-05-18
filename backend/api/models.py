@@ -21,6 +21,13 @@ class AnalysisStatus(models.TextChoices):
     FAILED = "failed", "Failed"
 
 
+class LLMAnalysisStatus(models.TextChoices):
+    QUEUED = "queued", "Queued"
+    PROCESSING = "processing", "Processing"
+    COMPLETE = "complete", "Complete"
+    FAILED = "failed", "Failed"
+
+
 class AppUserManager(BaseUserManager):
     def create_user(self, email=None, password=None, **extra_fields):
         email = self.normalize_email(email) if email else None
@@ -251,3 +258,30 @@ class ToxicityResult(models.Model):
 
     class Meta:
         db_table = "toxicity_result"
+
+
+class LLMAnalysisRun(models.Model):
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    user = models.ForeignKey(AppUser, on_delete=models.CASCADE)
+    status = models.TextField(
+        default=LLMAnalysisStatus.QUEUED,
+        choices=LLMAnalysisStatus.choices,
+    )
+    sample_size = models.IntegerField()
+    sample_seed = models.BigIntegerField(null=True)
+    model_name = models.TextField()
+    prompt_version = models.TextField()
+    sample_metadata = models.JSONField(null=True)
+    result = models.JSONField(null=True)
+    raw_output = models.TextField(null=True)
+    error_message = models.TextField(null=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        db_table = "llm_analysis_run"
+        indexes = [
+            models.Index(fields=["user"], name="llm_analysis_run_user_idx"),
+            models.Index(fields=["status"], name="llm_analysis_run_status_idx"),
+            models.Index(fields=["created_at"], name="llm_analysis_run_created_at_idx"),
+        ]

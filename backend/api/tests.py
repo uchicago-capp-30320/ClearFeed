@@ -11,6 +11,7 @@ from .models import (
     Tweet,
     ViewedTweet,
 )
+from .services.llm_sampling import sample_user_tweets
 
 
 class FeedSummaryTests(TestCase):
@@ -282,3 +283,85 @@ class SessionStatusTests(TestCase):
         )
 
         self.assertEqual(response.status_code, 401)
+
+
+class LlmSamplingTests(TestCase):
+    def setUp(self):
+        self.user = AppUser.objects.create()
+        self.session = BrowseSession.objects.create(
+            user=self.user,
+            platform="x",
+            user_agent="test-agent",
+        )
+        self.author = TwitterAuthor.objects.create(
+            author_twitter_id="author-1",
+            screen_name="alice",
+            display_name="Alice",
+        )
+
+    def _add_tweet(self, tweet_id, text, author=None):
+        tweet = Tweet.objects.create(
+            tweet_id=tweet_id,
+            author=author or self.author,
+            full_text=text,
+        )
+        ViewedTweet.objects.create(
+            user=self.user,
+            session=self.session,
+            tweet=tweet,
+        )
+        return tweet
+
+    def test_sample_user_tweets_returns_all_when_fewer_than_target(self):
+        self._add_tweet("tweet-1", "first tweet")
+        self._add_tweet("tweet-2", "second tweet")
+        self._add_tweet("tweet-3", "third tweet")
+        self._add_tweet("tweet-4", "fourth tweet")
+
+        sample = sample_user_tweets(self.user, sample_size=10, seed=7)
+
+        self.assertEqual(len(sample), 4)
+        self.assertTrue(
+            all(
+                item["tweet_id"] in {"tweet-1", "tweet-2", "tweet-3", "tweet-4"}
+                for item in sample
+            )
+        )
+        self.assertTrue(all("text" in item for item in sample))
+
+    def test_sample_user_tweets_caps_sample_at_target_size(self):
+        for index in range(12):
+            self._add_tweet(f"tweet-{index}", f"tweet {index}")
+
+        sample = sample_user_tweets(self.user, sample_size=10, seed=7)
+
+        self.assertEqual(len(sample), 10)
+
+    def test_sample_user_tweets_is_user_scoped(self):
+        other_user = AppUser.objects.create(email="other@example.com")
+        other_session = BrowseSession.objects.create(
+            user=other_user,
+            platform="x",
+            user_agent="test-agent",
+        )
+        other_author = TwitterAuthor.objects.create(
+            author_twitter_id="author-2",
+            screen_name="bob",
+            display_name="Bob",
+        )
+        tweet = Tweet.objects.create(
+            tweet_id="other-tweet",
+            author=other_author,
+            full_text="other person's tweet",
+        )
+        ViewedTweet.objects.create(
+            user=other_user,
+            session=other_session,
+            tweet=tweet,
+        )
+        self._add_tweet("tweet-1", "first tweet")
+
+        sample = sample_user_tweets(self.user, sample_size=10, seed=1)
+
+        self.assertEqual(len(sample), 1)
+        self.assertEqual(sample[0]["tweet_id"], "tweet-1")
