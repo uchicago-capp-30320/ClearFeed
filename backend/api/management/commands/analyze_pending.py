@@ -1,6 +1,7 @@
 from django.core.management.base import BaseCommand
 from api.models import Tweet, BrowseSession, ViewedTweet, AnalysisStatus, SessionStatus
 from api.services.analysis import analyze_tweet
+from api.services.llm_analysis_runner import run_user_llm_analysis
 
 
 class Command(BaseCommand):
@@ -64,6 +65,15 @@ class Command(BaseCommand):
                 session.status = SessionStatus.COMPLETE
                 session.save()
                 self.stdout.write(f"Session {session_id} → complete")
+                try:
+                    run_user_llm_analysis(session.user, sample_size=10, seed=None)
+                    self.stdout.write(f"Session {session_id} → llm analysis complete")
+                except Exception as exc:
+                    self.stdout.write(
+                        self.style.WARNING(
+                            f"Session {session_id} → llm analysis failed: {exc}"
+                        )
+                    )
             else:
                 self.stdout.write(
                     f"Session {session_id} → {unfinished} tweets still unfinished"

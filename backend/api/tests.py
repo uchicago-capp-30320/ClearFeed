@@ -1,16 +1,22 @@
 from django.test import TestCase
 from django.urls import reverse
+from unittest.mock import patch
 
 from .models import (
     AnalysisStatus,
     AppUser,
     BrowseSession,
+    LLMAnalysisRun,
+    LLMAnalysisStatus,
     SentimentResult,
     TopicResult,
     TwitterAuthor,
     Tweet,
     ViewedTweet,
 )
+from .services.llm_sampling import sample_user_tweets
+from .services.llm_analysis_runner import run_user_llm_analysis
+from .tasks import analyze_session
 
 
 class FeedSummaryTests(TestCase):
@@ -282,3 +288,269 @@ class SessionStatusTests(TestCase):
         )
 
         self.assertEqual(response.status_code, 401)
+
+
+class LlmSamplingTests(TestCase):
+    def setUp(self):
+        self.user = AppUser.objects.create()
+        self.session = BrowseSession.objects.create(
+            user=self.user,
+            platform="x",
+            user_agent="test-agent",
+        )
+        self.author = TwitterAuthor.objects.create(
+            author_twitter_id="author-1",
+            screen_name="alice",
+            display_name="Alice",
+        )
+
+    def _add_tweet(self, tweet_id, text, author=None):
+        tweet = Tweet.objects.create(
+            tweet_id=tweet_id,
+            author=author or self.author,
+            full_text=text,
+        )
+        ViewedTweet.objects.create(
+            user=self.user,
+            session=self.session,
+            tweet=tweet,
+        )
+        return tweet
+
+    def test_sample_user_tweets_returns_all_when_fewer_than_target(self):
+        self._add_tweet("tweet-1", "first tweet")
+        self._add_tweet("tweet-2", "second tweet")
+        self._add_tweet("tweet-3", "third tweet")
+        self._add_tweet("tweet-4", "fourth tweet")
+
+        sample = sample_user_tweets(self.user, sample_size=10, seed=7)
+
+        self.assertEqual(len(sample), 4)
+        self.assertTrue(
+            all(
+                item["tweet_id"] in {"tweet-1", "tweet-2", "tweet-3", "tweet-4"}
+                for item in sample
+            )
+        )
+        self.assertTrue(all("text" in item for item in sample))
+
+    def test_sample_user_tweets_caps_sample_at_target_size(self):
+        for index in range(12):
+            self._add_tweet(f"tweet-{index}", f"tweet {index}")
+
+        sample = sample_user_tweets(self.user, sample_size=10, seed=7)
+
+        self.assertEqual(len(sample), 10)
+
+    def test_sample_user_tweets_is_user_scoped(self):
+        other_user = AppUser.objects.create(email="other@example.com")
+        other_session = BrowseSession.objects.create(
+            user=other_user,
+            platform="x",
+            user_agent="test-agent",
+        )
+        other_author = TwitterAuthor.objects.create(
+            author_twitter_id="author-2",
+            screen_name="bob",
+            display_name="Bob",
+        )
+        tweet = Tweet.objects.create(
+            tweet_id="other-tweet",
+            author=other_author,
+            full_text="other person's tweet",
+        )
+        ViewedTweet.objects.create(
+            user=other_user,
+            session=other_session,
+            tweet=tweet,
+        )
+        self._add_tweet("tweet-1", "first tweet")
+
+        sample = sample_user_tweets(self.user, sample_size=10, seed=1)
+
+        self.assertEqual(len(sample), 1)
+        self.assertEqual(sample[0]["tweet_id"], "tweet-1")
+
+
+class LlmAnalysisRunnerTests(TestCase):
+    def setUp(self):
+        self.user = AppUser.objects.create()
+        self.session = BrowseSession.objects.create(
+            user=self.user,
+            platform="x",
+            user_agent="test-agent",
+        )
+        self.author = TwitterAuthor.objects.create(
+            author_twitter_id="author-1",
+            screen_name="alice",
+            display_name="Alice",
+        )
+
+    def _add_tweet(self, tweet_id, text):
+        tweet = Tweet.objects.create(
+            tweet_id=tweet_id,
+            author=self.author,
+            full_text=text,
+        )
+        ViewedTweet.objects.create(
+            user=self.user,
+            session=self.session,
+            tweet=tweet,
+        )
+
+    def test_run_user_llm_analysis_persists_complete_result(self):
+        self._add_tweet("tweet-1", "Climate policy and clean energy")
+        self._add_tweet("tweet-2", "Transit delays and city updates")
+
+        with patch(
+            "api.services.llm_analysis_runner.analyze_sampled_tweets",
+            return_value={
+                "model_name": "google/flan-t5-small",
+                "prompt_version": "v1",
+                "raw_output": '{"title":"Feed pulse"}',
+                "analysis": {
+                    "title": "Feed pulse",
+                    "themes": ["policy"],
+                    "patterns": ["replies"],
+                    "surprises": ["dense"],
+                    "follow_up_question": "What else?",
+                },
+                "parse_status": "ok",
+            },
+        ):
+            run = run_user_llm_analysis(self.user, sample_size=10, seed=3)
+
+        persisted = LLMAnalysisRun.objects.get(id=run.id)
+        self.assertEqual(persisted.status, LLMAnalysisStatus.COMPLETE)
+        self.assertEqual(persisted.sample_metadata["sample_size"], 2)
+        self.assertEqual(len(persisted.sample_metadata["tweet_ids"]), 2)
+        self.assertEqual(persisted.result["title"], "Feed pulse")
+        self.assertEqual(persisted.model_name, "google/flan-t5-small")
+        self.assertEqual(persisted.prompt_version, "v1")
+
+    def test_run_user_llm_analysis_marks_failed_when_no_tweets_exist(self):
+        with self.assertRaises(ValueError):
+            run_user_llm_analysis(self.user, sample_size=10, seed=3)
+
+        run = LLMAnalysisRun.objects.get(user=self.user)
+        self.assertEqual(run.status, LLMAnalysisStatus.FAILED)
+        self.assertEqual(run.error_message, "no tweets available for analysis")
+
+
+class LlmAnalysisEndpointTests(TestCase):
+    def setUp(self):
+        self.user = AppUser.objects.create()
+        self.other_user = AppUser.objects.create(email="other@example.com")
+        self.session = BrowseSession.objects.create(
+            user=self.user,
+            platform="x",
+            user_agent="test-agent",
+        )
+        self.author = TwitterAuthor.objects.create(
+            author_twitter_id="author-1",
+            screen_name="alice",
+            display_name="Alice",
+        )
+        self.client.force_login(self.user)
+
+    def _add_tweet(self, tweet_id, text):
+        tweet = Tweet.objects.create(
+            tweet_id=tweet_id,
+            author=self.author,
+            full_text=text,
+        )
+        ViewedTweet.objects.create(
+            user=self.user,
+            session=self.session,
+            tweet=tweet,
+        )
+
+    def test_start_run_endpoint_creates_run(self):
+        self._add_tweet("tweet-1", "Climate policy and clean energy")
+
+        with patch(
+            "api.views.run_user_llm_analysis",
+            return_value=LLMAnalysisRun.objects.create(
+                user=self.user,
+                status=LLMAnalysisStatus.COMPLETE,
+                sample_size=10,
+                sample_seed=None,
+                model_name="google/flan-t5-small",
+                prompt_version="v1",
+                sample_metadata={"sample_size": 1, "tweet_ids": ["tweet-1"]},
+                result={"title": "Feed pulse"},
+                raw_output='{"title":"Feed pulse"}',
+            ),
+        ):
+            response = self.client.post(
+                reverse("llm_analysis_runs"),
+                {"sample_size": 10},
+            )
+
+        self.assertEqual(response.status_code, 201)
+        payload = response.json()
+        self.assertEqual(payload["status"], "complete")
+        self.assertEqual(payload["sample_size"], 10)
+
+    def test_run_detail_endpoint_rejects_other_users_runs(self):
+        run = LLMAnalysisRun.objects.create(
+            user=self.other_user,
+            status=LLMAnalysisStatus.COMPLETE,
+            sample_size=10,
+            sample_seed=None,
+            model_name="google/flan-t5-small",
+            prompt_version="v1",
+            sample_metadata={},
+            result={},
+            raw_output="",
+        )
+
+        response = self.client.get(
+            reverse("llm_analysis_run_detail", kwargs={"run_id": run.id})
+        )
+
+        self.assertEqual(response.status_code, 404)
+
+
+class SessionPipelineTests(TestCase):
+    def setUp(self):
+        self.user = AppUser.objects.create()
+        self.session = BrowseSession.objects.create(
+            user=self.user,
+            platform="x",
+            user_agent="test-agent",
+        )
+        self.author = TwitterAuthor.objects.create(
+            author_twitter_id="author-1",
+            screen_name="alice",
+            display_name="Alice",
+        )
+
+    def test_analyze_session_triggers_llm_after_tweet_analysis(self):
+        tweet = Tweet.objects.create(
+            tweet_id="tweet-1",
+            author=self.author,
+            full_text="Climate policy and clean energy",
+            analysis_status=AnalysisStatus.PENDING,
+        )
+        ViewedTweet.objects.create(
+            user=self.user,
+            session=self.session,
+            tweet=tweet,
+        )
+
+        def fake_analyze_tweet(instance):
+            instance.analysis_status = AnalysisStatus.COMPLETE
+            instance.save(update_fields=["analysis_status"])
+
+        with (
+            patch("api.tasks.analyze_tweet", side_effect=fake_analyze_tweet),
+            patch("api.tasks.run_user_llm_analysis") as mock_llm,
+        ):
+            analyze_session(str(self.session.id))
+
+        mock_llm.assert_called_once()
+        called_user = mock_llm.call_args.args[0]
+        self.assertEqual(called_user.id, self.user.id)
+        self.assertEqual(mock_llm.call_args.kwargs["sample_size"], 10)
+        self.assertIsNone(mock_llm.call_args.kwargs["seed"])

@@ -4,6 +4,12 @@ from . import views
 
 urlpatterns = [
     path("import-dataset/", views.import_dataset, name="import_dataset"),
+    path("llm-analysis/runs/", views.llm_analysis_runs, name="llm_analysis_runs"),
+    path(
+        "llm-analysis/runs/<uuid:run_id>/",
+        views.llm_analysis_run_detail,
+        name="llm_analysis_run_detail",
+    ),
     path(
         "sessions/<uuid:session_id>/status/",
         views.session_status,

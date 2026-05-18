@@ -2,6 +2,8 @@ from collections import Counter
 import re
 
 from api.forms import AppUserCreationForm
+from api.models import LLMAnalysisRun
+from api.services.llm_analysis_runner import run_user_llm_analysis
 from api.services.ingestion import ingest_posts
 from api.services.wordcloud import WORDCLOUD_LIMIT, tokenize_words
 from django.contrib.auth import login
@@ -193,6 +195,70 @@ def _resolve_analysis_user(request):
         return AppUser.objects.get(id=user_id), None
     except (AppUser.DoesNotExist, ValueError):
         return None, JsonResponse({"error": "user not found"}, status=404)
+
+
+@csrf_exempt
+def llm_analysis_runs(request):
+    user, error_response = _resolve_analysis_user(request)
+    if error_response:
+        return error_response
+
+    if request.method != "POST":
+        return JsonResponse({"error": "method not allowed"}, status=405)
+
+    sample_size = request.POST.get("sample_size", 10)
+    seed = request.POST.get("seed")
+
+    try:
+        if seed in ("", None):
+            seed = None
+        else:
+            seed = int(seed)
+    except ValueError:
+        return JsonResponse({"error": "invalid seed"}, status=400)
+
+    try:
+        run = run_user_llm_analysis(user, sample_size=sample_size, seed=seed)
+    except ValueError as exc:
+        return JsonResponse({"error": str(exc)}, status=400)
+
+    return JsonResponse(
+        {
+            "run_id": str(run.id),
+            "status": run.status,
+            "sample_size": run.sample_size,
+        },
+        status=201,
+    )
+
+
+@csrf_exempt
+def llm_analysis_run_detail(request, run_id):
+    user, error_response = _resolve_analysis_user(request)
+    if error_response:
+        return error_response
+
+    try:
+        run = LLMAnalysisRun.objects.get(id=run_id, user=user)
+    except LLMAnalysisRun.DoesNotExist:
+        return JsonResponse({"error": "run not found"}, status=404)
+
+    return JsonResponse(
+        {
+            "run_id": str(run.id),
+            "status": run.status,
+            "sample_size": run.sample_size,
+            "sample_seed": run.sample_seed,
+            "model_name": run.model_name,
+            "prompt_version": run.prompt_version,
+            "sample_metadata": run.sample_metadata,
+            "result": run.result,
+            "raw_output": run.raw_output,
+            "error_message": run.error_message,
+            "created_at": run.created_at.isoformat() if run.created_at else None,
+            "updated_at": run.updated_at.isoformat() if run.updated_at else None,
+        }
+    )
 
 
 def _format_topic_label(topic):
