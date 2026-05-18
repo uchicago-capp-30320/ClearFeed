@@ -16,6 +16,7 @@ from .models import (
 )
 from .services.llm_sampling import sample_user_tweets
 from .services.llm_analysis_runner import run_user_llm_analysis
+from .tasks import analyze_session
 
 
 class FeedSummaryTests(TestCase):
@@ -509,3 +510,47 @@ class LlmAnalysisEndpointTests(TestCase):
         )
 
         self.assertEqual(response.status_code, 404)
+
+
+class SessionPipelineTests(TestCase):
+    def setUp(self):
+        self.user = AppUser.objects.create()
+        self.session = BrowseSession.objects.create(
+            user=self.user,
+            platform="x",
+            user_agent="test-agent",
+        )
+        self.author = TwitterAuthor.objects.create(
+            author_twitter_id="author-1",
+            screen_name="alice",
+            display_name="Alice",
+        )
+
+    def test_analyze_session_triggers_llm_after_tweet_analysis(self):
+        tweet = Tweet.objects.create(
+            tweet_id="tweet-1",
+            author=self.author,
+            full_text="Climate policy and clean energy",
+            analysis_status=AnalysisStatus.PENDING,
+        )
+        ViewedTweet.objects.create(
+            user=self.user,
+            session=self.session,
+            tweet=tweet,
+        )
+
+        def fake_analyze_tweet(instance):
+            instance.analysis_status = AnalysisStatus.COMPLETE
+            instance.save(update_fields=["analysis_status"])
+
+        with (
+            patch("api.tasks.analyze_tweet", side_effect=fake_analyze_tweet),
+            patch("api.tasks.run_user_llm_analysis") as mock_llm,
+        ):
+            analyze_session(str(self.session.id))
+
+        mock_llm.assert_called_once()
+        called_user = mock_llm.call_args.args[0]
+        self.assertEqual(called_user.id, self.user.id)
+        self.assertEqual(mock_llm.call_args.kwargs["sample_size"], 10)
+        self.assertIsNone(mock_llm.call_args.kwargs["seed"])

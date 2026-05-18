@@ -3,6 +3,7 @@ from django_q.tasks import async_task
 
 from api.models import AnalysisStatus, BrowseSession, SessionStatus, Tweet, ViewedTweet
 from api.services.analysis import analyze_tweet
+from api.services.llm_analysis_runner import run_user_llm_analysis
 
 
 def analyze_session(session_id):
@@ -53,6 +54,12 @@ def analyze_session(session_id):
         SessionStatus.FAILED if task_failed or any_failed else SessionStatus.COMPLETE
     )
     session.save(update_fields=["status", "updated_at"])
+
+    if session.status == SessionStatus.COMPLETE:
+        try:
+            run_user_llm_analysis(session.user, sample_size=10, seed=None)
+        except Exception as exc:
+            print(f"LLM analysis failed for session {session_id}: {exc}")
 
 
 def enqueue_session_analysis(session_id):
