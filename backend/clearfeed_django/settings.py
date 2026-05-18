@@ -58,10 +58,14 @@ BASE_DIR = Path(__file__).resolve().parent.parent  # ClearFeed/backend/
 SECRET_KEY = os.environ.get("SECRET_KEY")
 
 # SECURITY WARNING: don't run with debug turned on in production!
-DEBUG = True
+DEBUG = False
 
 ALLOWED_HOSTS = ["*"]  # ALLOWING ALL ONLY FOR LOCAL DEV TESTING!!
 
+CSRF_TRUSTED_ORIGINS = [
+    "https://clearfeed.civic.garden",
+    "http://localhost:8000",
+]
 
 # Application definition
 
