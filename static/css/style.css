@@ -24,12 +24,12 @@ body {
 }
 
 .navbar-inverse .navbar-brand {
-    color: var(--gold);
+    color: var(--light);
     font-weight: 700;
 }
 
 .navbar-inverse .navbar-brand:hover {
-    color: var(--gold);
+    color: var(--light);
 }
 
 .navbar-inverse .navbar-nav > li > a {
@@ -37,7 +37,7 @@ body {
 }
 
 .navbar-inverse .navbar-nav > li > a:hover {
-    color: var(--gold);
+    color: var(--light);
 }
 
 /* Form styling */
