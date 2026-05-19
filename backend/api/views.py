@@ -433,7 +433,7 @@ def topic_results(request, user_id=None):
     return render(request, "topic_results.html", context)
 
 
-def feed_summary(request):
+def api_feed_summary(request):
     """
     GET /api/feed-summary/
 
@@ -451,3 +451,12 @@ def feed_summary(request):
             "sentiment": _get_sentiment_summary(user),
         }
     )
+
+
+def feed_summary(request):
+    """
+    Returns the actual feed summary page, which uses fetch to get the data from /api/feed-summary/.
+
+    User check and data acquisition occurs in api_feed_summary
+    """
+    return render(request, "user_scroll.html")

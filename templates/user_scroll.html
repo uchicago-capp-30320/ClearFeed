@@ -382,26 +382,65 @@
 <script src="https://cdnjs.cloudflare.com/ajax/libs/d3-cloud/1.2.7/d3.layout.cloud.min.js"></script>
 
 <script>
-/* DUMMY DATA */
-const promotedPercentage = 30;
 
-const topicsData = {
-    categories: ["News", "Diaries", "Celebrity Gossip", "Sports", "Relationships"],
-    series: [{ name: "Percent of Posts on Your Feed", data: [26, 24, 7, 7, 6] }]
-};
+/* Data containers populated by the fetch */
+let topicsData, sentimentData, wordcloudData, promotedPercentage;
+let overviewData;
 
-const sentimentData = {
-    sentiment_average: [0.42],
-    sentiment: ["Negative", "Neutral", "Positive"],
-    series: [{ name: "Percentage of Tweets", data: [10, 40, 50] }]
-};
+async function loadFeedSummary() {
+    const response = await fetch("/api/feed-summary/");
+    if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+    }
+    const text = await response.text();
+    let data;
+    try {
+        data = JSON.parse(text);
+    } catch (e) {
+        console.error('Response was not JSON. First 500 chars:', text.slice(0, 500));
+        throw e;
+    }
 
-const wordcloudData = {
-    word: ["word","word","word","word","word","word","word","word","word","word",
-           "word","word","word","word","word","word","word","word","word","word"],
-    series: [{ name: "Frequency",
-               data: [100,95,80,70,65,60,55,50,45,42,40,38,35,30,28,25,22,20,15,10] }]
-};
+    // Topics → bar chart
+    topicsData = data.categories;
+
+    // Sentiment → wrap sentiment_average so existing [0] indexing works
+    sentimentData = {
+        sentiment_average: [data.sentiment.sentiment_average],
+        labels: data.sentiment.labels,
+        series: data.sentiment.series,
+    };
+
+    // Word cloud → existing render code reads `.word`, JSON gives `.labels`
+    wordcloudData = {
+        word: data.word_frequency.labels,
+        series: data.word_frequency.series,
+    };
+
+    // Promoted section
+    overviewData = data.overview;
+    promotedPercentage = data.overview.promoted_percentage;
+    populatePromotedText(data.overview);
+}
+
+function populatePromotedText(overview) {
+    // textBlock1 has inline text — rebuild it with real values
+    const tb1 = document.getElementById('textBlock1');
+    tb1.innerHTML =
+        `Of the ${overview.total_tweets} tweets that you've viewed since ` +
+        `${overview.since_date}, <strong>${overview.promoted_percentage}%</strong> ` +
+        `of them were labeled as Promoted. This includes Posts that the advertiser ` +
+        `paid to amplify, a vertical video ad, or a collection ad.`;
+
+    // Rebuild the users list from the API
+    const ul = document.getElementById('usersList');
+    ul.innerHTML = '';
+    overview.top_users.forEach((user, i) => {
+        const li = document.createElement('li');
+        li.textContent = `${i + 1}. ${user}`;
+        ul.appendChild(li);
+    });
+}
 
 /* ECharts bar */
 let barChart;
@@ -417,7 +456,7 @@ function renderTopics() {
         tooltip: { trigger: 'axis' },
         xAxis: {
             type: 'category',
-            data: topicsData.categories,
+            data: topicsData.labels,
             name: "Topic Category",
             nameLocation: "middle",
             nameGap: 23,
@@ -601,9 +640,16 @@ function renderWordcloud() {
     }
 }
 
-/* Scroll Animations */
-document.addEventListener('DOMContentLoaded', () => {
-    prepSentiment();  // fill text immediately
+/* Scroll Animations — now waits for data before observing */
+document.addEventListener('DOMContentLoaded', async () => {
+    try {
+        await loadFeedSummary();
+    } catch (err) {
+        console.error('Failed to load feed summary:', err);
+        return;  // bail — nothing to render without data
+    }
+
+    prepSentiment();  // fill text immediately, now that data exists
 
     const triggers = {
         'page-topics':    renderTopics,
