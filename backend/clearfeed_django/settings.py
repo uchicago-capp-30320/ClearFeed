@@ -58,7 +58,7 @@ BASE_DIR = Path(__file__).resolve().parent.parent  # ClearFeed/backend/
 SECRET_KEY = os.environ.get("SECRET_KEY")
 
 # SECURITY WARNING: don't run with debug turned on in production!
-DEBUG = False
+DEBUG = True
 
 ALLOWED_HOSTS = ["*"]  # ALLOWING ALL ONLY FOR LOCAL DEV TESTING!!
 
@@ -164,7 +164,9 @@ USE_TZ = True
 # https://docs.djangoproject.com/en/6.0/howto/static-files/
 
 STATIC_URL = "static/"
-
+STATICFILES_DIRS = [
+    BASE_DIR.parent / "static",
+]
 
 # Auth-related direction
 
