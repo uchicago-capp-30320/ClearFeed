@@ -15,7 +15,7 @@ urlpatterns = [
         views.session_status,
         name="session_status",
     ),
-    path("feed-summary/", views.feed_summary, name="feed_summary"),
+    path("feed-summary/", views.api_feed_summary, name="api_feed_summary"),
     path("", views.home, name="home"),
     path("onboarding/", views.onboarding, name="onboarding"),
     path("profile/", views.profile, name="profile"),
