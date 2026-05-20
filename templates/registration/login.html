@@ -1,157 +1,18 @@
 {% extends "base.html" %}
-{% load crispy_forms_tags %}
 {% load static %}
-
+ 
 {% block content %}
-
-<style>
-  :root {
-    --cf-blue: #009eed;
-    --cf-dark: #213847;
-    --cf-muted: #5f6f7a;
-  }
-
-  body {
-    background: linear-gradient(180deg, #e7f7ff 0%, #ffffff 45%, #e7f7ff 100%);
-    font-family: Helvetica, Arial, sans-serif;
-    color: var(--cf-dark);
-  }
-
-  .login-wrapper {
-    min-height: 85vh;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    padding: 40px 20px;
-  }
-
-  .login-card {
-    width: 100%;
-    max-width: 540px;
-    background: white;
-    border: 3px solid var(--cf-dark);
-    border-radius: 8px;
-    padding: 42px 38px;
-    box-shadow: 0 10px 0 rgba(33, 56, 71, 0.14);
-  }
-
-  .login-logo {
-    width: 95px;
-    display: block;
-    margin: 0 auto 18px;
-  }
-
-  .login-title {
-    text-align: center;
-    font-size: 42px;
-    font-weight: 800;
-    margin-bottom: 10px;
-  }
-
-  .login-subtitle {
-    text-align: center;
-    color: var(--cf-muted);
-    font-size: 16px;
-    line-height: 1.6;
-    margin-bottom: 32px;
-  }
-
-  .login-card input {
-    width: 100%;
-    border: 2px solid var(--cf-dark);
-    border-radius: 8px;
-    padding: 12px 14px;
-    margin-top: 6px;
-    margin-bottom: 16px;
-    font-size: 15px;
-  }
-
-  .login-card label {
-    font-weight: 700;
-    margin-bottom: 4px;
-  }
-
-  .login-button {
-    width: 100%;
-    background: var(--cf-blue);
-    color: white;
-    border: 2px solid var(--cf-dark);
-    border-radius: 8px;
-    padding: 14px 18px;
-    font-size: 16px;
-    font-weight: 800;
-    margin-top: 10px;
-    cursor: pointer;
-    box-shadow: 0 4px 0 rgba(33, 56, 71, 0.18);
-  }
-
-  .login-button:hover {
-    transform: translateY(1px);
-  }
-
-  .signup-link {
-    text-align: center;
-    margin-top: 22px;
-    font-size: 15px;
-    color: var(--cf-muted);
-  }
-
-  .signup-link a {
-    color: var(--cf-blue);
-    text-decoration: none;
-    font-weight: 700;
-  }
-
-  .signup-link a:hover {
-    text-decoration: underline;
-  }
-
-  .errorlist {
-    list-style: none;
-    padding: 12px 14px;
-    background: #fde8e8;
-    border: 1px solid #f5b5b5;
-    border-radius: 10px;
-    color: #9b1c1c;
-    margin-bottom: 18px;
-  }
-</style>
-
-<div class="login-wrapper">
-
-  <div class="login-card">
-
-    <img
-      src="{% static 'images/clearfeed-logo.png' %}"
-      alt="ClearFeed Logo"
-      class="login-logo"
-    >
-
-    <h1 class="login-title">Welcome back</h1>
-
-    <p class="login-subtitle">
-      Sign in to continue using ClearFeed.
-    </p>
-
-    <form method="POST">
-      {% csrf_token %}
-
-      {{ form|crispy }}
-
-      <button class="login-button" type="submit">
-        Sign in
-      </button>
-    </form>
-
-    <div class="signup-link">
-      Don’t have an account?
-      <a href="{% url 'signup' %}">
-        Create one
-      </a>
-    </div>
-
+ 
+<div class="center-wrapper">
+  <div class="center-card">
+    <h1>You're logged out</h1>
+    <p>You have successfully signed out of ClearFeed.</p>
+ 
+    <a href="{% url 'login' %}" class="primary-button">
+      Sign back in
+    </a>
   </div>
-
 </div>
-
+ 
 {% endblock content %}
+ 
