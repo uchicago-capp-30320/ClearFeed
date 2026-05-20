@@ -1,18 +1,17 @@
 {% extends "base.html" %}
 {% load static %}
- 
+
 {% block content %}
- 
+
 <div class="center-wrapper">
   <div class="center-card">
     <h1>You're logged out</h1>
     <p>You have successfully signed out of ClearFeed.</p>
- 
+
     <a href="{% url 'login' %}" class="primary-button">
       Sign back in
     </a>
   </div>
 </div>
- 
+
 {% endblock content %}
- 

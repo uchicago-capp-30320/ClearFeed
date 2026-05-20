@@ -390,28 +390,28 @@ a.nav-link:hover {
 .gap-lg { gap: 24px; }
 
 /* privacy page styles */
- 
+
 .privacy-wrapper {
   max-width: 900px;
   margin: 0 auto;
   padding: 50px 20px 80px;
 }
- 
+
 .privacy-header {
   text-align: center;
   margin-bottom: 50px;
 }
- 
+
 .privacy-header h1 {
   font-size: 44px;
   margin-bottom: 16px;
 }
- 
+
 .privacy-header p {
   font-size: 18px;
   color: var(--cf-muted);
 }
- 
+
 .privacy-section {
   background: white;
   border: 2px solid var(--cf-border);
@@ -420,7 +420,7 @@ a.nav-link:hover {
   margin-bottom: 24px;
   box-shadow: 0 4px 0 rgba(33, 56, 71, 0.08);
 }
- 
+
 .privacy-section h2 {
   color: var(--cf-blue);
   font-size: 24px;
@@ -428,34 +428,34 @@ a.nav-link:hover {
   padding-bottom: 12px;
   border-bottom: 2px solid var(--cf-light-blue);
 }
- 
+
 .privacy-section p {
   margin-bottom: 14px;
   line-height: 1.8;
   color: var(--cf-dark);
 }
- 
+
 .privacy-section ul {
   margin-left: 24px;
   margin-bottom: 14px;
 }
- 
+
 .privacy-section li {
   margin-bottom: 10px;
   line-height: 1.7;
 }
- 
+
 .privacy-highlight {
   background: var(--cf-light-blue);
   padding: 16px 20px;
   margin: 10px 0;
   border-radius: 6px;
 }
- 
+
 .privacy-highlight strong {
   color: var(--cf-blue);
 }
- 
+
 .privacy-contact {
   background: linear-gradient(135deg, #e7f7ff 0%, #f0fbff 100%);
   border: 2px solid var(--cf-blue);
@@ -464,13 +464,13 @@ a.nav-link:hover {
   text-align: center;
   margin-top: 40px;
 }
- 
+
 .privacy-contact h2 {
   border: none;
   padding-bottom: 0;
   margin-bottom: 12px;
 }
- 
+
 .privacy-contact p {
   font-size: 16px;
   margin-bottom: 18px;
