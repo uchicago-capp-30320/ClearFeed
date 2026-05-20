@@ -6,7 +6,6 @@ For each scenario:
 
 - Follow the **Test Instructions**
 - Compare against the **Expected Behavior**
-- Complete the **Test Result** section
 
 ---
 
