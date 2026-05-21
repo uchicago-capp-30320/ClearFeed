@@ -25,7 +25,7 @@
 
   .home-card {
     width: 100%;
-    max-width: 450px;
+    max-width: 480px;
     background: white;
     border: 3px solid var(--cf-dark);
     border-radius: 8px;
@@ -34,8 +34,8 @@
   }
 
   .home-logo {
-    width: 150px;
-    margin-bottom: 18px;
+    width: 100px;
+    margin-bottom: 10px;
   }
 
   .home-card h1 {
@@ -48,7 +48,7 @@
     color: var(--cf-muted);
     font-size: 17px;
     line-height: 1.6;
-    margin-bottom: 28px;
+    margin-bottom: 45px;
   }
 
   .home-button {
@@ -56,9 +56,9 @@
     background: #009eed;
     color: white;
     text-decoration: none;
-    padding: 14px 22px;
-    border-radius: 8px;
-    border: 2px solid var(--cf-dark);
+    padding: 13px 24px;
+    border-radius: 10px;
+    border: 1px solid var(--cf-dark);
     font-weight: 800;
     box-shadow: 0 4px 0 rgba(33, 56, 71, 0.18);
   }
@@ -66,6 +66,38 @@
   .home-button:hover {
     transform: translateY(1px);
   }
+
+  .stats-container {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+    gap: 16px;
+    width: 100%;
+    max-width: 520px;
+  }
+
+  .stat-box {
+    background: white;
+    border: 2px solid var(--cf-dark);
+    border-radius: 8px;
+    padding: 24px 16px;
+    text-align: center;
+    box-shadow: 0 4px 0 rgba(33, 56, 71, 0.08);
+  }
+
+  .stat-number {
+    font-size: 32px;
+    font-weight: 800;
+    color: var(--cf-blue);
+    margin-bottom: 8px;
+  }
+
+  .stat-label {
+    font-size: 13px;
+    color: var(--cf-muted);
+    font-weight: 600;
+    line-height: 1.4;
+  }
+
 </style>
 
 <div class="home-wrapper">
@@ -113,17 +145,17 @@
   <div class="stats-container">
     <div class="stat-box">
       <div class="stat-number">8</div>
-      <div class="stat-label">Scrolling sessions</div>
+      <div class="stat-label">Total no. of scrolling sessions</div>
     </div>
 
     <div class="stat-box">
       <div class="stat-number">1,234</div>
-      <div class="stat-label">Tweets analyzed</div>
+      <div class="stat-label">No. of tweets analyzed</div>
     </div>
 
     <div class="stat-box">
       <div class="stat-number">3</div>
-      <div class="stat-label">Days since last session</div>
+      <div class="stat-label">Days since the last session</div>
     </div>
   </div>
   {% endif %}
