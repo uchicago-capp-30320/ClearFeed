@@ -1,10 +1,12 @@
 {% extends "base.html" %}
+
 {% block title %}Your Feed Report{% endblock %}
+
 {% block content %}
 
 <div class="deck" id="deck">
 
-  <!-- Viz 1: Topics -->
+  <!-- PAGE 1: Topics -->
   <section class="page page-topics" id="page-topics">
     <div class="page-content">
       <h1>Your Top 5 Most Frequent Topics</h1>
@@ -14,7 +16,7 @@
     </div>
   </section>
 
-  <!--Viz 2: Promoted -->
+  <!-- PAGE 2: Promoted -->
   <section class="page page-promoted" id="page-promoted">
     <div class="page-content">
       <div class="promoted-container">
@@ -64,7 +66,7 @@
     </div>
   </section>
 
-  <!-- Viz 3: Sentiment -->
+  <!-- PAGE 3: Sentiment -->
   <section class="page page-sentiment" id="page-sentiment">
     <div class="page-content">
       <div class="sentiment-content">
@@ -78,8 +80,7 @@
             The sentiments of your tweets were
             <span class="num" id="pct-positive">—</span> positive,
             <span class="num" id="pct-negative">—</span> negative, and
-            <span class="num" id="pct-neutral">—</span> neutral, so the overall general sentiment was
-            <span class="tag" id="overall-label">—</span>
+            <span class="num" id="pct-neutral">—</span> neutral.
           </div>
           <div class="blurb" id="blurb">Calculating sentiment profile…</div>
         </div>
@@ -107,7 +108,7 @@
     </div>
   </section>
 
-  <!-- Viz 4: Word Cloud -->
+  <!-- PAGE 4: Word Cloud -->
   <section class="page page-wordcloud" id="page-wordcloud">
     <div class="page-content">
       <div class="wordcloud-wrapper">
@@ -126,76 +127,67 @@
 
 <div class="tooltip" id="tooltip"></div>
 
-
 <!-- Libraries -->
 <script src="https://cdn.jsdelivr.net/npm/echarts@5/dist/echarts.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/d3/7.8.5/d3.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/d3-cloud/1.2.7/d3.layout.cloud.min.js"></script>
 
 <script>
+  /* Data containers populated by the fetch */
+  let topicsData, sentimentData, wordcloudData, promotedPercentage;
+  let overviewData;
 
-/* Data containers populated by the fetch */
-let topicsData, sentimentData, wordcloudData, promotedPercentage;
-let overviewData;
-
-async function loadFeedSummary() {
+  async function loadFeedSummary() {
     const response = await fetch("/api/feed-summary/");
     if (!response.ok) {
-        throw new Error(`HTTP error! status: ${response.status}`);
+      throw new Error(`HTTP error! status: ${response.status}`);
     }
     const text = await response.text();
     let data;
     try {
-        data = JSON.parse(text);
+      data = JSON.parse(text);
     } catch (e) {
-        console.error('Response was not JSON. First 500 chars:', text.slice(0, 500));
-        throw e;
+      console.error('Response was not JSON. First 500 chars:', text.slice(0, 500));
+      throw e;
     }
 
-    // Topics → bar chart
     topicsData = data.categories;
 
-    // Sentiment → wrap sentiment_average so existing [0] indexing works
     sentimentData = {
-        sentiment_average: [data.sentiment.sentiment_average],
-        labels: data.sentiment.labels,
-        series: data.sentiment.series,
+      sentiment_average: [data.sentiment.sentiment_average],
+      labels: data.sentiment.labels,
+      series: data.sentiment.series,
     };
 
-    // Word cloud → existing render code reads `.word`, JSON gives `.labels`
     wordcloudData = {
-        word: data.word_frequency.labels,
-        series: data.word_frequency.series,
+      word: data.word_frequency.labels,
+      series: data.word_frequency.series,
     };
 
-    // Promoted section
     overviewData = data.overview;
     promotedPercentage = data.overview.promoted_percentage;
     populatePromotedText(data.overview);
-}
+  }
 
-function populatePromotedText(overview) {
-    // textBlock1 has inline text — rebuild it with real values
+  function populatePromotedText(overview) {
     const tb1 = document.getElementById('textBlock1');
     tb1.innerHTML =
-        `Of the ${overview.total_tweets} tweets that you've viewed since ` +
-        `${overview.since_date}, <strong>${overview.promoted_percentage}%</strong> ` +
-        `of them were labeled as Promoted. This includes Posts that the advertiser ` +
-        `paid to amplify, a vertical video ad, or a collection ad.`;
+      `Of the ${overview.total_tweets} tweets that you've viewed since ` +
+      `${overview.since_date}, <strong>${overview.promoted_percentage}%</strong> ` +
+      `of them were labeled as Promoted.`;
 
-    // Rebuild the users list from the API
     const ul = document.getElementById('usersList');
     ul.innerHTML = '';
     overview.top_users.forEach((user, i) => {
-        const li = document.createElement('li');
-        li.textContent = `${i + 1}. ${user}`;
-        ul.appendChild(li);
+      const li = document.createElement('li');
+      li.textContent = `${i + 1}. ${user}`;
+      ul.appendChild(li);
     });
-}
+  }
 
-/* ECharts bar */
-let barChart;
-function renderTopics() {
+  /* ECharts bar */
+  let barChart;
+  function renderTopics() {
     if (barChart) return;
     const el = document.getElementById('barChart');
     barChart = echarts.init(el);
@@ -203,40 +195,40 @@ function renderTopics() {
     const COLORS = ['#5470c6', '#91cc75', '#fac858', '#ee6666', '#73c0de'];
 
     barChart.setOption({
-        textStyle: { color: '#8a8fa8', fontFamily: 'sans-serif' },
-        tooltip: { trigger: 'axis' },
-        xAxis: {
-            type: 'category',
-            data: topicsData.labels,
-            name: "Topic Category",
-            nameLocation: "middle",
-            nameGap: 23,
-            axisLine: { lineStyle: { color: '#2a2d3a' } },
-            axisLabel: { color: '#8a8fa8' },
+      textStyle: { color: '#8a8fa8', fontFamily: 'sans-serif' },
+      tooltip: { trigger: 'axis' },
+      xAxis: {
+        type: 'category',
+        data: topicsData.labels,
+        name: "Topic Category",
+        nameLocation: "middle",
+        nameGap: 23,
+        axisLine: { lineStyle: { color: '#2a2d3a' } },
+        axisLabel: { color: '#8a8fa8' },
+      },
+      yAxis: {
+        type: 'value',
+        splitLine: { lineStyle: { color: '#2a2d3a' } },
+        axisLabel: { color: '#8a8fa8' },
+      },
+      grid: { left: '3%', right: '4%', bottom: '3%', containLabel: true },
+      series: [{
+        name: topicsData.series[0].name,
+        type: 'bar',
+        data: topicsData.series[0].data,
+        itemStyle: {
+          color: (p) => COLORS[p.dataIndex % COLORS.length],
+          borderRadius: [4, 4, 0, 0],
         },
-        yAxis: {
-            type: 'value',
-            splitLine: { lineStyle: { color: '#2a2d3a' } },
-            axisLabel: { color: '#8a8fa8' },
-        },
-        grid: { left: '3%', right: '4%', bottom: '3%', containLabel: true },
-        series: [{
-            name: topicsData.series[0].name,
-            type: 'bar',
-            data: topicsData.series[0].data,
-            itemStyle: {
-                color: (p) => COLORS[p.dataIndex % COLORS.length],
-                borderRadius: [4, 4, 0, 0],
-            },
-        }],
+      }],
     });
 
     window.addEventListener('resize', () => barChart && barChart.resize());
-}
+  }
 
-/* Promoted Animations */
-let promotedAnimated = false;
-function animatePromoted() {
+  /* Promoted Animations */
+  let promotedAnimated = false;
+  function animatePromoted() {
     if (promotedAnimated) return;
     promotedAnimated = true;
 
@@ -247,21 +239,21 @@ function animatePromoted() {
     const userItems = document.querySelectorAll('#usersList li');
 
     const TIMING = {
-        dollarFadeIn: 300,
-        fillStart: 1000,
-        textBlock1: 3300,
-        textBlock2: 4400,
-        usersStart: 5200,
-        userInterval: 500
+      dollarFadeIn: 300,
+      fillStart: 1000,
+      textBlock1: 3300,
+      textBlock2: 4400,
+      usersStart: 5200,
+      userInterval: 500
     };
 
     setTimeout(() => dollarSvg.classList.add('visible'), TIMING.dollarFadeIn);
 
     setTimeout(() => {
-        const totalHeight = 500;
-        const fillHeight = (promotedPercentage / 100) * totalHeight;
-        fillRect.setAttribute('y', totalHeight - fillHeight);
-        fillRect.setAttribute('height', fillHeight);
+      const totalHeight = 500;
+      const fillHeight = (promotedPercentage / 100) * totalHeight;
+      fillRect.setAttribute('y', totalHeight - fillHeight);
+      fillRect.setAttribute('height', fillHeight);
     }, TIMING.fillStart);
 
     setTimeout(() => textBlock1.classList.add('visible'), TIMING.textBlock1);
@@ -269,26 +261,26 @@ function animatePromoted() {
 
     const reversed = [...userItems].reverse();
     reversed.forEach((item, i) => {
-        setTimeout(() => item.classList.add('visible'),
-                   TIMING.usersStart + i * TIMING.userInterval);
+      setTimeout(() => item.classList.add('visible'),
+                 TIMING.usersStart + i * TIMING.userInterval);
     });
-}
+  }
 
-/* Sentiment  */
-function classifyOverall(score) {
+  /* Sentiment  */
+  function classifyOverall(score) {
     if (score <= -0.33) return { word: "Negative", cls: "negative" };
     if (score >=  0.33) return { word: "Positive", cls: "positive" };
     return { word: "Neutral", cls: "neutral" };
-}
-function blurbFor(cls, score) {
+  }
+  function blurbFor(cls, score) {
     const s = score.toFixed(2);
     if (cls === "positive") return `A score of ${s} suggests a positive tone — the majority of posts trend toward approval, optimism, or support.`;
     if (cls === "negative") return `A score of ${s} suggests a negative tone — most posts express disapproval, frustration, or concern.`;
     return `A score of ${s} suggests a neutral tone — posts are largely informational or evenly split between approval and dissent.`;
-}
+  }
 
-let sentimentReady = false;
-function prepSentiment() {
+  let sentimentReady = false;
+  function prepSentiment() {
     if (sentimentReady) return;
     sentimentReady = true;
     const score = sentimentData.sentiment_average[0];
@@ -303,10 +295,10 @@ function prepSentiment() {
     labelEl.textContent = overall.word;
     labelEl.classList.add(overall.cls);
     document.getElementById("blurb").textContent = blurbFor(overall.cls, score);
-}
+  }
 
-let sentimentAnimated = false;
-function animateSentiment() {
+  let sentimentAnimated = false;
+  function animateSentiment() {
     if (sentimentAnimated) return;
     sentimentAnimated = true;
 
@@ -317,13 +309,13 @@ function animateSentiment() {
     const needle = document.getElementById("needle");
     needle.style.transform = "rotate(-90deg)";
     requestAnimationFrame(() => {
-        setTimeout(() => { needle.style.transform = `rotate(${angle}deg)`; }, 250);
+      setTimeout(() => { needle.style.transform = `rotate(${angle}deg)`; }, 250);
     });
-}
+  }
 
-/* Word Cloud */
-let wcRendered = false;
-function renderWordcloud() {
+  /* Word Cloud */
+  let wcRendered = false;
+  function renderWordcloud() {
     if (wcRendered) return;
     wcRendered = true;
 
@@ -339,9 +331,9 @@ function renderWordcloud() {
     const fontScale = d3.scaleSqrt().domain([minFreq, maxFreq]).range([14, 64]);
 
     const words = wordcloudData.word.map((w, i) => ({
-        text: w,
-        frequency: frequencies[i],
-        size: fontScale(frequencies[i])
+      text: w,
+      frequency: frequencies[i],
+      size: fontScale(frequencies[i])
     }));
 
     const color = d3.scaleOrdinal(d3.schemeTableau10);
@@ -358,70 +350,70 @@ function renderWordcloud() {
         .start();
 
     function draw(placedWords) {
-        const svg = d3.select("#wordcloud")
-            .append("svg")
-            .attr("viewBox", `0 0 ${width} ${height}`)
-            .attr("preserveAspectRatio", "xMidYMid meet");
+      const svg = d3.select("#wordcloud")
+          .append("svg")
+          .attr("viewBox", `0 0 ${width} ${height}`)
+          .attr("preserveAspectRatio", "xMidYMid meet");
 
-        svg.append("g")
-            .attr("transform", `translate(${width / 2}, ${height / 2})`)
-            .selectAll("text")
-            .data(placedWords)
-            .enter()
-            .append("text")
-            .attr("class", "word-text")
-            .style("font-size", d => `${d.size}px`)
-            .style("font-family", "sans-serif")
-            .style("font-weight", "600")
-            .style("fill", (d, i) => color(i))
-            .attr("text-anchor", "middle")
-            .attr("transform", d => `translate(${d.x}, ${d.y}) rotate(${d.rotate})`)
-            .text(d => d.text)
-            .on("mouseenter", function(event, d) {
-                tooltip.textContent = `${d.text}: ${d.frequency} (${seriesName})`;
-                tooltip.classList.add('visible');
-            })
-            .on("mousemove", function(event) {
-                tooltip.style.left = (event.clientX + 12) + 'px';
-                tooltip.style.top = (event.clientY + 12) + 'px';
-            })
-            .on("mouseleave", function() {
-                tooltip.classList.remove('visible');
-            });
+      svg.append("g")
+          .attr("transform", `translate(${width / 2}, ${height / 2})`)
+          .selectAll("text")
+          .data(placedWords)
+          .enter()
+          .append("text")
+          .attr("class", "word-text")
+          .style("font-size", d => `${d.size}px`)
+          .style("font-family", "sans-serif")
+          .style("font-weight", "600")
+          .style("fill", (d, i) => color(i))
+          .attr("text-anchor", "middle")
+          .attr("transform", d => `translate(${d.x}, ${d.y}) rotate(${d.rotate})`)
+          .text(d => d.text)
+          .on("mouseenter", function(event, d) {
+            tooltip.textContent = `${d.text}: ${d.frequency} (${seriesName})`;
+            tooltip.classList.add('visible');
+          })
+          .on("mousemove", function(event) {
+            tooltip.style.left = (event.clientX + 12) + 'px';
+            tooltip.style.top = (event.clientY + 12) + 'px';
+          })
+          .on("mouseleave", function() {
+            tooltip.classList.remove('visible');
+          });
     }
-}
+  }
 
-/* Scroll Animations — now waits for data before observing */
-document.addEventListener('DOMContentLoaded', async () => {
+  /* Scroll Animations — now waits for data before observing */
+  document.addEventListener('DOMContentLoaded', async () => {
     try {
-        await loadFeedSummary();
+      await loadFeedSummary();
     } catch (err) {
-        console.error('Failed to load feed summary:', err);
-        return;  // bail — nothing to render without data
+      console.error('Failed to load feed summary:', err);
+      return;  // bail — nothing to render without data
     }
 
     prepSentiment();  // fill text immediately, now that data exists
 
     const triggers = {
-        'page-topics':    renderTopics,
-        'page-promoted':  animatePromoted,
-        'page-sentiment': animateSentiment,
-        'page-wordcloud': renderWordcloud,
+      'page-topics':    renderTopics,
+      'page-promoted':  animatePromoted,
+      'page-sentiment': animateSentiment,
+      'page-wordcloud': renderWordcloud,
     };
 
     const io = new IntersectionObserver((entries) => {
-        entries.forEach(en => {
-            if (en.isIntersecting && triggers[en.target.id]) {
-                triggers[en.target.id]();
-            }
-        });
+      entries.forEach(en => {
+        if (en.isIntersecting && triggers[en.target.id]) {
+          triggers[en.target.id]();
+        }
+      });
     }, { threshold: 0.4 });
 
     Object.keys(triggers).forEach(id => {
-        const el = document.getElementById(id);
-        if (el) io.observe(el);
+      const el = document.getElementById(id);
+      if (el) io.observe(el);
     });
-});
+  });
 </script>
-</body>
+
 {% endblock %}
