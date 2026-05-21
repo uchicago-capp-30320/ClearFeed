@@ -181,6 +181,9 @@ USE_TZ = True
 DJANGO_STRUCTLOG_IP_LOGGING_ENABLED = False
 DJANGO_STRUCTLOG_USER_ID_FIELD = None
 
+LOG_DIR = BASE_DIR.parent / "_logs"
+LOG_DIR.mkdir(exist_ok=True)
+
 LOGGING = {
     "version": 1,
     "disable_existing_loggers": True,
