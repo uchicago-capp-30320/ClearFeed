@@ -3,182 +3,6 @@
 
 {% block content %}
 
-<style>
-  :root {
-    --cf-blue: #009eed;
-    --cf-dark: #213847;
-    --cf-light-blue: #e8f6fd;
-    --cf-border: #213847;
-    --cf-muted: #5f6f7a;
-    --cf-green: #1f9d55;
-    --cf-warning: #fff3cd;
-    --cf-warning-border: #f0b429;
-    --cf-bg: linear-gradient(180deg, #e7f7ff 0%, #ffffff 42%, #e7f7ff 100%);
-  }
-
-  body {
-    background: var(--cf-bg);
-  }
-
-  .onboarding-wrapper {
-    max-width: 980px;
-    margin: 0 auto;
-    padding: 48px 20px 80px;
-    font-family: Helvetica, Arial, sans-serif;
-    color: var(--cf-dark);
-  }
-
-  .hero-card {
-    background: white;
-    border: 3px solid var(--cf-border);
-    border-radius: 8px;
-    padding: 36px;
-    box-shadow: 0 10px 0 rgba(33, 56, 71, 0.15);
-    text-align: center;
-    margin-bottom: 32px;
-  }
-
-  .hero-logo {
-    width: 110px;
-    margin-bottom: 18px;
-  }
-
-  .hero-card h1 {
-    font-size: 44px;
-    margin: 0 0 12px;
-    font-weight: 800;
-  }
-
-  .hero-card p {
-    font-size: 18px;
-    margin: 0;
-    color: var(--cf-muted);
-  }
-
-  .browser-banner {
-    border-radius: 8px;
-    padding: 18px 22px;
-    margin-bottom: 28px;
-    font-size: 16px;
-    border: 2px solid;
-  }
-
-  .browser-success {
-    background: #e9f8ef;
-    border-color: var(--cf-green);
-    color: #14532d;
-  }
-
-  .browser-warning {
-    background: var(--cf-warning);
-    border-color: var(--cf-warning-border);
-    color: #213847;
-  }
-
-  .step-card {
-    background: white;
-    border: 2px solid var(--cf-border);
-    border-radius: 8px;
-    padding: 26px;
-    margin-bottom: 22px;
-    box-shadow: 0 5px 0 rgba(33, 56, 71, 0.12);
-  }
-
-  .step-header {
-    display: flex;
-    gap: 14px;
-    align-items: center;
-    margin-bottom: 12px;
-  }
-
-  .step-number {
-    background: var(--cf-blue);
-    color: white;
-    border: 2px solid var(--cf-border);
-    border-radius: 50%;
-    width: 38px;
-    height: 38px;
-    display: flex;
-    justify-content: center;
-    align-items: center;
-    font-weight: 800;
-  }
-
-  .step-card h2 {
-    margin: 0;
-    font-size: 24px;
-  }
-
-  .step-card p,
-  .step-card li {
-    font-size: 16px;
-    line-height: 1.6;
-  }
-
-  .primary-button,
-  .secondary-button {
-    display: inline-block;
-    margin-top: 14px;
-    padding: 13px 22px;
-    border-radius: 10px;
-    font-weight: 700;
-    text-decoration: none;
-    border: 2px solid var(--cf-border);
-    box-shadow: 0 4px 0 rgba(33, 56, 71, 0.2);
-  }
-
-  .primary-button {
-    background: var(--cf-blue);
-    color: white;
-  }
-
-  .primary-button.disabled {
-    background: #c9d2d8;
-    color: #667782;
-    pointer-events: none;
-    box-shadow: none;
-  }
-
-  .secondary-button {
-    background: white;
-    color: var(--cf-dark);
-  }
-
-  .mini-note {
-    background: var(--cf-light-blue);
-    padding: 14px 16px;
-    margin-top: 14px;
-  }
-
-  .faq-section {
-    margin-top: 36px;
-  }
-
-  .faq-section h2 {
-    font-size: 30px;
-    margin-bottom: 18px;
-  }
-
-  details {
-    background: white;
-    border: 2px solid var(--cf-border);
-    border-radius: 14px;
-    padding: 16px 18px;
-    margin-bottom: 12px;
-  }
-
-  summary {
-    cursor: pointer;
-    font-weight: 800;
-    color: var(--cf-dark);
-  }
-
-  details p {
-    margin-bottom: 0;
-    line-height: 1.6;
-  }
-</style>
-
 <div class="onboarding-wrapper">
 
   <section class="hero-card">
@@ -187,7 +11,7 @@
     <p>You're almost ready. Follow these steps to start understanding your Twitter feed.</p>
   </section>
 
-  <div id="browser-status" class="browser-banner">
+  <div id="browser-status" class="banner">
     Checking your browser...
   </div>
 
@@ -222,8 +46,7 @@
     <a
       id="install-button"
       class="primary-button disabled"
-      href="https://github.com/teddykolios11/ClearFeed-Capture/releases/latest/download/62fc9d80cc0f43f29587-1.1.4.xpi
-"
+      href="https://github.com/teddykolios11/ClearFeed-Capture/releases/latest/download/62fc9d80cc0f43f29587-1.1.4.xpi"
     >
       Install ClearFeed Extension
     </a>
@@ -319,11 +142,11 @@
   const installButton = document.getElementById("install-button");
 
   if (isFirefox) {
-    browserStatus.className = "browser-banner browser-success";
+    browserStatus.className = "banner banner-success";
     browserStatus.innerHTML = "You're using Firefox, you're good to go!";
     installButton.classList.remove("disabled");
   } else {
-    browserStatus.className = "browser-banner browser-warning";
+    browserStatus.className = "banner banner-warning";
     browserStatus.innerHTML = "WARNING: ClearFeed requires Firefox. You appear to be using a different browser.";
     firefoxHelp.style.display = "block";
     installButton.classList.add("disabled");
