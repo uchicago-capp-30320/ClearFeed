@@ -5,15 +5,14 @@ import re
 from transformers import pipeline
 
 
-MODEL_NAME = os.getenv("LLM_ANALYSIS_MODEL", "google/flan-t5-small")
-PROMPT_VERSION = "v2"
+MODEL_NAME = os.getenv("LLM_ANALYSIS_MODEL", "microsoft/Phi-3.5-mini-instruct")
 _generator = None
 
 
 def get_llm_generator():
     global _generator
     if _generator is None:
-        _generator = pipeline("text2text-generation", model=MODEL_NAME)
+        _generator = pipeline("text-generation", model=MODEL_NAME)
     return _generator
 
 
@@ -27,14 +26,19 @@ def analyze_sampled_tweets(tweets):
 
     try:
         generator = get_llm_generator()
-        result = generator(prompt, max_new_tokens=256, do_sample=False)
+        model_input = _format_model_input(generator, prompt)
+        result = generator(
+            model_input,
+            max_new_tokens=256,
+            do_sample=False,
+            return_full_text=False,
+        )
         raw_output = ""
         if result and isinstance(result, list):
             raw_output = result[0].get("generated_text", "") or ""
         structured = parse_analysis_output(raw_output)
         return {
             "model_name": MODEL_NAME,
-            "prompt_version": PROMPT_VERSION,
             "prompt": prompt,
             "raw_output": raw_output,
             "analysis": structured,
@@ -44,7 +48,6 @@ def analyze_sampled_tweets(tweets):
         fallback = build_fallback_analysis(tweets, str(exc))
         return {
             "model_name": MODEL_NAME,
-            "prompt_version": PROMPT_VERSION,
             "prompt": prompt,
             "raw_output": "",
             "analysis": fallback,
@@ -75,6 +78,21 @@ def build_analysis_prompt(tweets):
         f"Top words: {', '.join(top_words) if top_words else 'none'}\n\n"
         "Tweets:\n" + "\n".join(tweet_lines)
     )
+
+
+def _format_model_input(generator, prompt):
+    tokenizer = getattr(generator, "tokenizer", None)
+    if tokenizer and hasattr(tokenizer, "apply_chat_template"):
+        messages = [{"role": "user", "content": prompt}]
+        try:
+            return tokenizer.apply_chat_template(
+                messages,
+                tokenize=False,
+                add_generation_prompt=True,
+            )
+        except Exception:
+            return prompt
+    return prompt
 
 
 def parse_analysis_output(raw_output):

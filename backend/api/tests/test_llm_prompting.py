@@ -55,8 +55,7 @@ class LlmPromptingTests(SimpleTestCase):
         ):
             payload = analyze_sampled_tweets(self.sample)
 
-        self.assertEqual(payload["model_name"], "google/flan-t5-small")
-        self.assertEqual(payload["prompt_version"], "v2")
+        self.assertEqual(payload["model_name"], "microsoft/Phi-3.5-mini-instruct")
         self.assertEqual(payload["parse_status"], "ok")
         self.assertEqual(
             payload["analysis"]["reflection"], "Paragraph one.\n\nParagraph two."

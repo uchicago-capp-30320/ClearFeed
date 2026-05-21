@@ -16,7 +16,6 @@ def run_user_llm_analysis(user, sample_size=10, seed=None):
         sample_size=sample_size,
         sample_seed=seed,
         model_name="",
-        prompt_version="",
         sample_metadata={},
     )
 
@@ -30,7 +29,6 @@ def run_user_llm_analysis(user, sample_size=10, seed=None):
 
         analysis_payload = analyze_sampled_tweets(sampled_tweets)
         run.model_name = analysis_payload.get("model_name", "")
-        run.prompt_version = analysis_payload.get("prompt_version", "")
         run.sample_metadata = {
             "sample_size": len(sampled_tweets),
             "tweet_ids": [tweet["tweet_id"] for tweet in sampled_tweets],
@@ -42,7 +40,6 @@ def run_user_llm_analysis(user, sample_size=10, seed=None):
         run.save(
             update_fields=[
                 "model_name",
-                "prompt_version",
                 "sample_metadata",
                 "raw_output",
                 "result",

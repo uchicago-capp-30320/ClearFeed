@@ -172,8 +172,7 @@ class FeedSummaryTests(TestCase):
             status=LLMAnalysisStatus.COMPLETE,
             sample_size=10,
             sample_seed=None,
-            model_name="google/flan-t5-small",
-            prompt_version="v2",
+            model_name="meta-llama/Meta-Llama-3.1-8B-Instruct",
             sample_metadata={"sample_size": 1, "tweet_ids": ["tweet-1"]},
             result={"reflection": "A thoughtful reflection on the feed."},
             raw_output='{"reflection":"A thoughtful reflection on the feed."}',
@@ -188,8 +187,7 @@ class FeedSummaryTests(TestCase):
                 "status": "complete",
                 "reflection": "A thoughtful reflection on the feed.",
                 "run_id": str(run.id),
-                "model_name": "google/flan-t5-small",
-                "prompt_version": "v2",
+                "model_name": "meta-llama/Meta-Llama-3.1-8B-Instruct",
                 "created_at": response.json()["llm_analysis"]["created_at"],
             },
         )
@@ -449,8 +447,7 @@ class LlmAnalysisRunnerTests(TestCase):
         with patch(
             "api.services.llm_analysis_runner.analyze_sampled_tweets",
             return_value={
-                "model_name": "google/flan-t5-small",
-                "prompt_version": "v2",
+                "model_name": "meta-llama/Meta-Llama-3.1-8B-Instruct",
                 "raw_output": '{"reflection":"Paragraph one.\\n\\nParagraph two."}',
                 "analysis": {"reflection": "Paragraph one.\n\nParagraph two."},
                 "parse_status": "ok",
@@ -463,8 +460,7 @@ class LlmAnalysisRunnerTests(TestCase):
         self.assertEqual(persisted.sample_metadata["sample_size"], 2)
         self.assertEqual(len(persisted.sample_metadata["tweet_ids"]), 2)
         self.assertIn("Paragraph one.", persisted.result["reflection"])
-        self.assertEqual(persisted.model_name, "google/flan-t5-small")
-        self.assertEqual(persisted.prompt_version, "v2")
+        self.assertEqual(persisted.model_name, "meta-llama/Meta-Llama-3.1-8B-Instruct")
 
     def test_run_user_llm_analysis_marks_failed_when_no_tweets_exist(self):
         with self.assertRaises(ValueError):
@@ -513,8 +509,7 @@ class LlmAnalysisEndpointTests(TestCase):
                 status=LLMAnalysisStatus.COMPLETE,
                 sample_size=10,
                 sample_seed=None,
-                model_name="google/flan-t5-small",
-                prompt_version="v2",
+                model_name="meta-llama/Meta-Llama-3.1-8B-Instruct",
                 sample_metadata={"sample_size": 1, "tweet_ids": ["tweet-1"]},
                 result={"reflection": "Paragraph one.\n\nParagraph two."},
                 raw_output='{"reflection":"Paragraph one.\\n\\nParagraph two."}',
@@ -536,8 +531,7 @@ class LlmAnalysisEndpointTests(TestCase):
             status=LLMAnalysisStatus.COMPLETE,
             sample_size=10,
             sample_seed=None,
-            model_name="google/flan-t5-small",
-            prompt_version="v2",
+            model_name="meta-llama/Meta-Llama-3.1-8B-Instruct",
             sample_metadata={},
             result={},
             raw_output="",

@@ -245,7 +245,6 @@ def llm_analysis_run_detail(request, run_id):
             "sample_size": run.sample_size,
             "sample_seed": run.sample_seed,
             "model_name": run.model_name,
-            "prompt_version": run.prompt_version,
             "sample_metadata": run.sample_metadata,
             "result": run.result,
             "raw_output": run.raw_output,
@@ -413,7 +412,6 @@ def _get_llm_reflection_summary(user):
         "reflection": reflection,
         "run_id": str(run.id),
         "model_name": run.model_name,
-        "prompt_version": run.prompt_version,
         "created_at": run.created_at.isoformat() if run.created_at else None,
     }
 
