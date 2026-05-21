@@ -149,6 +149,50 @@ class FeedSummaryTests(TestCase):
                 ],
             },
         )
+        self.assertEqual(
+            payload["llm_analysis"],
+            {
+                "status": "not_started",
+                "reflection": "",
+                "run_id": None,
+            },
+        )
+
+    def test_feed_summary_includes_latest_llm_reflection(self):
+        self._add_tweet(
+            "tweet-1",
+            "Future climate policy future",
+            "cats",
+            "positive",
+            promoted=True,
+            author=self.author,
+        )
+        run = LLMAnalysisRun.objects.create(
+            user=self.user,
+            status=LLMAnalysisStatus.COMPLETE,
+            sample_size=10,
+            sample_seed=None,
+            model_name="google/flan-t5-small",
+            prompt_version="v2",
+            sample_metadata={"sample_size": 1, "tweet_ids": ["tweet-1"]},
+            result={"reflection": "A thoughtful reflection on the feed."},
+            raw_output='{"reflection":"A thoughtful reflection on the feed."}',
+        )
+
+        response = self.client.get("/api/feed-summary/")
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(
+            response.json()["llm_analysis"],
+            {
+                "status": "complete",
+                "reflection": "A thoughtful reflection on the feed.",
+                "run_id": str(run.id),
+                "model_name": "google/flan-t5-small",
+                "prompt_version": "v2",
+                "created_at": response.json()["llm_analysis"]["created_at"],
+            },
+        )
 
     def test_feed_summary_returns_empty_payload_without_tweets(self):
         response = self.client.get("/api/feed-summary/")
@@ -406,15 +450,9 @@ class LlmAnalysisRunnerTests(TestCase):
             "api.services.llm_analysis_runner.analyze_sampled_tweets",
             return_value={
                 "model_name": "google/flan-t5-small",
-                "prompt_version": "v1",
-                "raw_output": '{"title":"Feed pulse"}',
-                "analysis": {
-                    "title": "Feed pulse",
-                    "themes": ["policy"],
-                    "patterns": ["replies"],
-                    "surprises": ["dense"],
-                    "follow_up_question": "What else?",
-                },
+                "prompt_version": "v2",
+                "raw_output": '{"reflection":"Paragraph one.\\n\\nParagraph two."}',
+                "analysis": {"reflection": "Paragraph one.\n\nParagraph two."},
                 "parse_status": "ok",
             },
         ):
@@ -424,9 +462,9 @@ class LlmAnalysisRunnerTests(TestCase):
         self.assertEqual(persisted.status, LLMAnalysisStatus.COMPLETE)
         self.assertEqual(persisted.sample_metadata["sample_size"], 2)
         self.assertEqual(len(persisted.sample_metadata["tweet_ids"]), 2)
-        self.assertEqual(persisted.result["title"], "Feed pulse")
+        self.assertIn("Paragraph one.", persisted.result["reflection"])
         self.assertEqual(persisted.model_name, "google/flan-t5-small")
-        self.assertEqual(persisted.prompt_version, "v1")
+        self.assertEqual(persisted.prompt_version, "v2")
 
     def test_run_user_llm_analysis_marks_failed_when_no_tweets_exist(self):
         with self.assertRaises(ValueError):
@@ -476,10 +514,10 @@ class LlmAnalysisEndpointTests(TestCase):
                 sample_size=10,
                 sample_seed=None,
                 model_name="google/flan-t5-small",
-                prompt_version="v1",
+                prompt_version="v2",
                 sample_metadata={"sample_size": 1, "tweet_ids": ["tweet-1"]},
-                result={"title": "Feed pulse"},
-                raw_output='{"title":"Feed pulse"}',
+                result={"reflection": "Paragraph one.\n\nParagraph two."},
+                raw_output='{"reflection":"Paragraph one.\\n\\nParagraph two."}',
             ),
         ):
             response = self.client.post(
@@ -499,7 +537,7 @@ class LlmAnalysisEndpointTests(TestCase):
             sample_size=10,
             sample_seed=None,
             model_name="google/flan-t5-small",
-            prompt_version="v1",
+            prompt_version="v2",
             sample_metadata={},
             result={},
             raw_output="",

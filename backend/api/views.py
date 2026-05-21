@@ -395,6 +395,30 @@ def _get_sentiment_summary(user):
     }
 
 
+def _get_llm_reflection_summary(user):
+    run = LLMAnalysisRun.objects.filter(user=user).order_by("-created_at").first()
+
+    if not run:
+        return {
+            "status": "not_started",
+            "reflection": "",
+            "run_id": None,
+        }
+
+    reflection = ""
+    if isinstance(run.result, dict):
+        reflection = run.result.get("reflection", "") or ""
+
+    return {
+        "status": run.status,
+        "reflection": reflection,
+        "run_id": str(run.id),
+        "model_name": run.model_name,
+        "prompt_version": run.prompt_version,
+        "created_at": run.created_at.isoformat() if run.created_at else None,
+    }
+
+
 # comprehensive view for all user-related feed analysis
 def full_analysis(request, user_id):
     user = AppUser.objects.filter(id=user_id)
@@ -445,5 +469,6 @@ def feed_summary(request):
             "categories": _get_topic_summary(user),
             "word_frequency": _get_word_frequency_summary(user),
             "sentiment": _get_sentiment_summary(user),
+            "llm_analysis": _get_llm_reflection_summary(user),
         }
     )
