@@ -340,6 +340,41 @@ label {
   color: var(--cf-dark);
 }
 
+/* ========================================
+   Form Validation & Help Text
+   ======================================== */
+
+.errorlist {
+  list-style: none;
+  padding: 12px 14px;
+  background: #e9f8ef;
+  border: 2px solid var(--cf-green);
+  border-radius: 8px;
+  color: #14532d;
+  margin-bottom: 18px;
+  font-size: 14px;
+}
+
+.errorlist li {
+  margin-bottom: 8px;
+}
+
+.errorlist li:last-child {
+  margin-bottom: 0;
+}
+
+.helptext {
+  display: block;
+  font-size: 13px;
+  color: var(--cf-muted);
+  margin-top: 4px;
+  margin-bottom: 12px;
+}
+
+.fieldWrapper {
+  margin-bottom: 16px;
+}
+
 /* links */
 
 a {
