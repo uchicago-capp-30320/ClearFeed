@@ -16,8 +16,9 @@
   }
 
   .home-wrapper {
-    min-height: 82vh;
+    min-height: 85vh;
     display: flex;
+    flex-direction: column;
     align-items: center;
     justify-content: center;
     padding: 40px 20px;
@@ -31,6 +32,8 @@
     border-radius: 8px;
     text-align: center;
     box-shadow: 0 10px 0 rgba(33, 56, 71, 0.14);
+    padding: 42px 36px;
+    margin-bottom: 40px;
   }
 
   .home-logo {
@@ -97,13 +100,11 @@
     font-weight: 600;
     line-height: 1.4;
   }
-
 </style>
 
 <div class="home-wrapper">
 
   <div class="home-card">
-
     <img
       src="{% static 'images/clearfeed-logo.png' %}"
       alt="ClearFeed Logo"
@@ -113,7 +114,6 @@
     <h1>ClearFeed</h1>
 
     {% if user.is_authenticated %}
-
       <p>
         Welcome back, {{ user.email }}.
       </p>
@@ -121,9 +121,7 @@
       <a href="{% url 'onboarding' %}" class="home-button">
         Open setup guide
       </a>
-
     {% else %}
-
       <p>
         Understand what your Twitter/X feed is showing you.
       </p>
@@ -131,14 +129,7 @@
       <a href="{% url 'login' %}" class="home-button">
         Sign in
       </a>
-
     {% endif %}
-
-  </div>
-
-</div>
-{% endblock %}
-
   </div>
 
   {% if user.is_authenticated %}
@@ -159,3 +150,7 @@
     </div>
   </div>
   {% endif %}
+
+</div>
+
+{% endblock %}
