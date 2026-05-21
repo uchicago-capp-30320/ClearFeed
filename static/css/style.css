@@ -549,26 +549,24 @@ a.nav-link:hover {
   }
 }
 
-/* ========================================
-   Landing Page Styles
-   ======================================== */
- 
+/* landing page style */
+
 .landing-wrapper {
   max-width: 1000px;
   margin: 0 auto;
   padding: 60px 20px 80px;
 }
- 
+
 .landing-hero {
   text-align: center;
   margin-bottom: 60px;
 }
- 
+
 .landing-hero h1 {
   font-size: 48px;
   margin-bottom: 20px;
 }
- 
+
 .landing-hero-subtitle {
   font-size: 18px;
   color: var(--cf-muted);
@@ -578,7 +576,7 @@ a.nav-link:hover {
   margin-left: auto;
   margin-right: auto;
 }
- 
+
 .landing-cta {
   display: flex;
   gap: 16px;
@@ -586,14 +584,14 @@ a.nav-link:hover {
   margin-bottom: 60px;
   flex-wrap: wrap;
 }
- 
+
 .landing-content {
   display: grid;
   grid-template-columns: 1fr 1fr;
   gap: 32px;
   margin-bottom: 50px;
 }
- 
+
 .content-block {
   background: white;
   border: 2px solid var(--cf-border);
@@ -601,36 +599,36 @@ a.nav-link:hover {
   padding: 28px;
   box-shadow: 0 4px 0 rgba(33, 56, 71, 0.08);
 }
- 
+
 .content-block h2 {
   color: var(--cf-blue);
   font-size: 22px;
   margin-bottom: 14px;
 }
- 
+
 .content-block p {
   color: var(--cf-muted);
   font-size: 15px;
   line-height: 1.7;
 }
- 
+
 /* ========================================
    Signup Page Styles
    ======================================== */
- 
+
 .signup-logo {
   width: 95px;
   display: block;
   margin: 0 auto 18px;
 }
- 
+
 .signup-title {
   text-align: center;
   font-size: 42px;
   font-weight: 800;
   margin-bottom: 10px;
 }
- 
+
 .signup-subtitle {
   text-align: center;
   color: var(--cf-muted);
@@ -638,7 +636,7 @@ a.nav-link:hover {
   line-height: 1.6;
   margin-bottom: 32px;
 }
- 
+
 .signup-button {
   width: 100%;
   background: var(--cf-blue);
@@ -652,41 +650,41 @@ a.nav-link:hover {
   cursor: pointer;
   box-shadow: 0 4px 0 rgba(33, 56, 71, 0.18);
 }
- 
+
 .signup-button:hover {
   transform: translateY(-2px);
   box-shadow: 0 6px 0 rgba(33, 56, 71, 0.25);
 }
- 
+
 .signup-button:active {
   transform: translateY(0);
   box-shadow: 0 4px 0 rgba(33, 56, 71, 0.18);
 }
- 
+
 .login-link {
   text-align: center;
   margin-top: 22px;
   font-size: 15px;
   color: var(--cf-muted);
 }
- 
+
 .login-link a {
   color: var(--cf-blue);
   text-decoration: none;
   font-weight: 700;
 }
- 
+
 .login-link a:hover {
   text-decoration: underline;
 }
- 
+
 .helptext {
   font-size: 13px;
   color: var(--cf-muted);
   margin-top: -8px;
   margin-bottom: 14px;
 }
- 
+
 .errorlist {
   list-style: none;
   padding: 12px 14px;
@@ -696,16 +694,16 @@ a.nav-link:hover {
   color: #9b1c1c;
   margin-bottom: 18px;
 }
- 
+
 /* user scroll */
- 
+
 .deck {
   height: 100vh;
   overflow-y: scroll;
   scroll-snap-type: y mandatory;
   scroll-behavior: smooth;
 }
- 
+
 .page {
   min-height: 100vh;
   scroll-snap-align: start;
@@ -716,24 +714,24 @@ a.nav-link:hover {
   align-items: center;
   justify-content: center;
 }
- 
+
 .page-content {
   width: 100%;
   max-width: 1000px;
 }
- 
+
 /* Viz 1: Topics */
 .page-topics {
   background: var(--cf-bg);
 }
- 
+
 .page-topics h1 {
   text-align: center;
   font-size: 44px;
   margin-bottom: 40px;
   color: var(--cf-dark);
 }
- 
+
 .chart-card {
   background: white;
   border: 2px solid var(--cf-border);
@@ -741,24 +739,24 @@ a.nav-link:hover {
   padding: 32px;
   box-shadow: 0 4px 0 rgba(33, 56, 71, 0.08);
 }
- 
+
 #barChart {
   width: 100%;
   min-height: 500px;
 }
- 
+
 /* Viz 2: Promoted */
 .page-promoted {
   background: linear-gradient(135deg, #f0fbff 0%, #ffffff 100%);
 }
- 
+
 .promoted-container {
   display: grid;
   grid-template-columns: 1fr 1fr;
   gap: 60px;
   align-items: center;
 }
- 
+
 .dollar-container {
   display: flex;
   justify-content: center;
@@ -769,7 +767,7 @@ a.nav-link:hover {
   border-radius: 12px;
   box-shadow: 0 4px 0 rgba(33, 56, 71, 0.08);
 }
- 
+
 .dollar-svg {
   width: 100%;
   max-width: 300px;
@@ -777,22 +775,22 @@ a.nav-link:hover {
   opacity: 0;
   transition: opacity 0.8s ease-in;
 }
- 
+
 .dollar-svg.visible {
   opacity: 1;
 }
- 
+
 .fill-rect {
   transition: y 2s cubic-bezier(0.65, 0, 0.35, 1),
               height 2s cubic-bezier(0.65, 0, 0.35, 1);
 }
- 
+
 .promoted-text {
   display: flex;
   flex-direction: column;
   gap: 32px;
 }
- 
+
 .text-block {
   font-size: 18px;
   line-height: 1.8;
@@ -801,23 +799,23 @@ a.nav-link:hover {
   transform: translateY(20px);
   transition: opacity 0.8s ease-out, transform 0.8s ease-out;
 }
- 
+
 .text-block.visible {
   opacity: 1;
   transform: translateY(0);
 }
- 
+
 .text-block strong {
   color: var(--cf-blue);
   font-weight: 800;
 }
- 
+
 .users-list {
   list-style: none;
   margin-top: 16px;
   padding-left: 20px;
 }
- 
+
 .users-list li {
   font-size: 16px;
   padding: 8px 0;
@@ -826,38 +824,38 @@ a.nav-link:hover {
   transform: translateX(-20px);
   transition: opacity 0.6s ease-out, transform 0.6s ease-out;
 }
- 
+
 .users-list li.visible {
   opacity: 1;
   transform: translateX(0);
 }
- 
+
 /* Viz 3: Sentiment */
 .page-sentiment {
   background: var(--cf-bg);
 }
- 
+
 .sentiment-content {
   max-width: 900px;
   margin: 0 auto;
 }
- 
+
 .sentiment-header {
   text-align: center;
   margin-bottom: 40px;
 }
- 
+
 .sentiment-header h1 {
   font-size: 44px;
   color: var(--cf-dark);
   margin-bottom: 12px;
 }
- 
+
 .sentiment-header p {
   color: var(--cf-muted);
   font-size: 16px;
 }
- 
+
 .summary-card {
   background: white;
   border: 2px solid var(--cf-border);
@@ -866,18 +864,18 @@ a.nav-link:hover {
   margin-bottom: 32px;
   box-shadow: 0 4px 0 rgba(33, 56, 71, 0.08);
 }
- 
+
 .summary-text {
   font-size: 16px;
   line-height: 1.8;
   color: var(--cf-dark);
 }
- 
+
 .summary-text .num {
   color: var(--cf-blue);
   font-weight: 800;
 }
- 
+
 .tag {
   display: inline-block;
   padding: 4px 12px;
@@ -887,25 +885,25 @@ a.nav-link:hover {
   margin: 0 4px;
   border: 2px solid;
 }
- 
+
 .tag.positive {
   background: #e9f8ef;
   border-color: var(--cf-green);
   color: #14532d;
 }
- 
+
 .tag.negative {
   background: #fde8e8;
   border-color: #f5b5b5;
   color: #9b1c1c;
 }
- 
+
 .tag.neutral {
   background: var(--cf-light-blue);
   border-color: var(--cf-blue);
   color: var(--cf-dark);
 }
- 
+
 .blurb {
   margin-top: 16px;
   padding-top: 16px;
@@ -914,7 +912,7 @@ a.nav-link:hover {
   color: var(--cf-muted);
   font-style: italic;
 }
- 
+
 .dial-card {
   background: white;
   border: 2px solid var(--cf-border);
@@ -922,7 +920,7 @@ a.nav-link:hover {
   padding: 40px 32px;
   box-shadow: 0 4px 0 rgba(33, 56, 71, 0.08);
 }
- 
+
 .dial-svg {
   display: block;
   width: 100%;
@@ -930,13 +928,13 @@ a.nav-link:hover {
   height: auto;
   margin: 0 auto;
 }
- 
+
 .needle {
   transform-origin: 300px 220px;
   transform: rotate(-90deg);
   transition: transform 1400ms cubic-bezier(0.34, 1.2, 0.64, 1);
 }
- 
+
 .scale-row {
   display: flex;
   justify-content: space-between;
@@ -947,33 +945,33 @@ a.nav-link:hover {
   font-weight: 600;
   color: var(--cf-muted);
 }
- 
+
 /* Viz 4: Word Cloud */
 .page-wordcloud {
   background: var(--cf-bg);
 }
- 
+
 .wordcloud-wrapper {
   max-width: 1000px;
   margin: 0 auto;
 }
- 
+
 .wordcloud-header {
   text-align: center;
   margin-bottom: 40px;
 }
- 
+
 .wordcloud-header h1 {
   font-size: 44px;
   color: var(--cf-dark);
   margin-bottom: 12px;
 }
- 
+
 .wordcloud-header p {
   color: var(--cf-muted);
   font-size: 16px;
 }
- 
+
 .wordcloud-container {
   background: white;
   border: 2px solid var(--cf-border);
@@ -981,7 +979,7 @@ a.nav-link:hover {
   padding: 40px;
   box-shadow: 0 4px 0 rgba(33, 56, 71, 0.08);
 }
- 
+
 #wordcloud {
   width: 100%;
   height: 500px;
@@ -991,21 +989,21 @@ a.nav-link:hover {
   align-items: center;
   justify-content: center;
 }
- 
+
 #wordcloud svg {
   max-width: 100%;
   height: auto;
 }
- 
+
 .word-text {
   cursor: pointer;
   transition: opacity 0.2s ease;
 }
- 
+
 .word-text:hover {
   opacity: 0.7;
 }
- 
+
 .tooltip {
   position: fixed;
   background: rgba(33, 56, 71, 0.95);
@@ -1019,7 +1017,7 @@ a.nav-link:hover {
   z-index: 100;
   white-space: nowrap;
 }
- 
+
 .tooltip.visible {
   opacity: 1;
 }
