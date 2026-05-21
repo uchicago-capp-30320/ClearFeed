@@ -18,7 +18,6 @@ from .models import (
     BrowseSession,
     SentimentResult,
     TopicResult,
-    ToxicityResult,
     Tweet,
     ViewedTweet,
 )
@@ -417,24 +416,6 @@ def _get_llm_reflection_summary(user):
         "prompt_version": run.prompt_version,
         "created_at": run.created_at.isoformat() if run.created_at else None,
     }
-
-
-# comprehensive view for all user-related feed analysis
-def full_analysis(request, user_id):
-    user = AppUser.objects.filter(id=user_id)
-    # user_viewed_tweets = ViewedTweet.objects.filter(user=user).values_list("tweet", flat=True)
-
-    context = {
-        "user": AppUser.objects.filter(id=user),
-        "sentiment_results": SentimentResult.objects.filter(
-            tweet__viewedtweet__user=user
-        ),
-        "topic_results": TopicResult.objects.filter(tweet__viewedtweet__user=user),
-        "toxicity_results": ToxicityResult.objects.filter(
-            tweet__viewedtweet__user=user
-        ),
-    }
-    return render(request, "full_analysis.html", context)
 
 
 def topic_results(request, user_id=None):

@@ -22,23 +22,6 @@ The following endpoints support data ingestion and analysis-related pages within
 
 ---
 
-## `/analysis`
-
-### Parameters
-- `user_id`: Primary key for `AppUser`
-
-### Response
-- `full_analysis.html`: HTML page displaying comprehensive analysis of user's feed data
-
-### Template Context Variables
-- `user`: corresponding `AppUser` object  
-- `sentiment_results`: list of `SentimentResult` objects  
-- `topic_results`: list of `TopicResult` objects  
-- `political_leaning_results`: list of `PoliticalLeaningResult` objects  
-- `toxicity_results`: list of `ToxicityResult` objects  
-
----
-
 ## `/sentiment`
 
 ### Parameters
