@@ -6,6 +6,7 @@ from api.models import LLMAnalysisRun
 from api.services.llm_analysis_runner import run_user_llm_analysis
 from api.services.ingestion import ingest_posts
 from api.services.wordcloud import WORDCLOUD_LIMIT, tokenize_words
+from django.contrib.auth import login
 from django.contrib.auth.decorators import login_required
 from django.db.models import Count, Min
 from django.http import JsonResponse
@@ -121,8 +122,11 @@ def signup(request):
         form = AppUserCreationForm(request.POST)
 
         if form.is_valid():
-            form.save()
-            return redirect("login")
+            user = form.save()
+
+            login(request, user)  # automatically sign in user after sign up
+
+            return redirect("onboarding")
 
     else:
         form = AppUserCreationForm()
@@ -432,7 +436,7 @@ def topic_results(request, user_id=None):
     return render(request, "topic_results.html", context)
 
 
-def feed_summary(request):
+def api_feed_summary(request):
     """
     GET /api/feed-summary/
 
@@ -451,3 +455,12 @@ def feed_summary(request):
             "llm_analysis": _get_llm_reflection_summary(user),
         }
     )
+
+
+def feed_summary(request):
+    """
+    Returns the actual feed summary page, which uses fetch to get the data from /api/feed-summary/.
+
+    User check and data acquisition occurs in api_feed_summary
+    """
+    return render(request, "user_scroll.html")
