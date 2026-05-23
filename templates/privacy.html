@@ -3,23 +3,61 @@
 {% block title %}Our Privacy{% endblock %}
 
 {% block content %}
-<body>
-    ClearFeed is an app about being transparent with social media, and as such, we value our user's trust in us to handle their data properly.
 
+<div class="privacy-wrapper">
+
+  <section class="privacy-header">
+    <h1>Our Privacy Policy</h1>
+    <p>Your trust matters to us. Here's how we protect your data.</p>
+  </section>
+
+  <section class="privacy-section">
+    <h2>Our Commitment</h2>
+    <p>
+      ClearFeed is an extension about being transparent with social media, and as such, we prioritize your privacy and security above all else. .
+    </p>
+    <div class="privacy-highlight">
+      <strong>Important:</strong> Data sent in ClearFeed is not made public nor is it shared with a third-party service. We do not buy, sell, share, or trade user data. We do not use user
+    data for external advertisement.
+    </div>
+    <p>
     ClearFeed operates by using a browser extension to access visible information from user social media feeds that is saved locally to the user's machine.
     Information sent to ClearFeed includes posts, information on the authors of the post such as their follower count, the number of favorites of that post,
     comments, quote tweets, replies, hashtags, mentions, whether a tweet is promoted, and retweets. The browser extension sends this informaton directly to ClearFeed
     with no intermediary service.
+  </section>
 
-    ClearFeed uses Django authentication to handle the user log-in.
-
+  <section class="privacy-section">
+    <h2>How Do We Process Your Data?</h2>
+    <p>
     Data submitted to ClearFeed is analyzed via a locally-run LLM model through HuggingFace to analyze macro-level statistics and trends in your social media feed.
     The models used are a score for hate/non-hate speech, an emotion classifier, and widely used Twitter sentiments classifier.
     Because these models are run locally, user data is not sent to an external service or provider.
+    </p>
 
-    Data sent in ClearFeed is not made public nor is it shared with a third-party service. We do not buy, sell, share, or trade user data. We do not use user
-    data for external advertisement.
+  </section>
 
-    By using ClearFeed, you consent to our privacy policy. Users may contact ClearFeed to request a complete wipe of their user data from our database.
-</body>
+  <section class="privacy-section">
+    <h2>Authentication & Security</h2>
+    <p>ClearFeed uses Django authentication to handle the user log-in.
+    </p>
+  </section>
+
+  <section class="privacy-section">
+    <h2>Your Rights</h2>
+    <p>
+      You have full control over your data. At any time, you can request a complete wipe of your user data from our database, including all analysis and associated information.
+    </p>
+  </section>
+
+  <section class="privacy-contact">
+    <h2>Questions or Concerns?</h2>
+    <p>
+      If you have any questions about our privacy practices or wish to request deletion of your data, please contact us.
+    </p>
+    <a href="mailto:clearfeed@uchicago.edu" class="primary-button">Contact Us</a>
+  </section>
+
+</div>
+
 {% endblock %}

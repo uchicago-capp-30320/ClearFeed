@@ -56,11 +56,14 @@
           <a class="navbar-brand" href="{% url 'landing' %}">ClearFeed</a>
         </div>
         <div class="collapse navbar-collapse" id="mainNavBar">
+          <!--Would be nice to order this with Privacy and Onboarding on the right side away from the user stuff-->
           <ul class="nav navbar-nav navbar-right">
+            <li><a href="{% url 'home' %}">User Profile</a></li>
             <li><a href="{% url 'privacy' %}">Privacy</a></li>
-            <li><a href="{% url 'home' %}">Home</a></li>
+            <li><a href="{% url 'onboarding' %}">Onboarding</a></li>
 
             {% if user.is_authenticated %}
+            <li><a href="{% url 'feed_summary' %}">Feed Summary</a></li>
             <li>
               <form method="post" action="{% url 'logout' %}" style="display:inline;">
                 {% csrf_token %}
@@ -91,7 +94,7 @@
     {% if user.is_authenticated %}
     <center><h1>welcome back {{user.username}}!</h1></center>
     {% else %}
-    <center><h1>log in, plz . . .</h1></center>
+    <center><h1>log in, please . . .</h1></center>
     {% endif %}
     {% endblock %}
   </div>

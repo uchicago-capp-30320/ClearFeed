@@ -3,6 +3,7 @@ from api.models import LLMAnalysisRun
 from api.services.feed_summary import build_feed_summary
 from api.services.llm_analysis_runner import run_user_llm_analysis
 from api.services.ingestion import ingest_posts
+from django.contrib.auth import login
 from django.contrib.auth.decorators import login_required
 from django.db.models import Count
 from django.http import JsonResponse
@@ -117,8 +118,11 @@ def signup(request):
         form = AppUserCreationForm(request.POST)
 
         if form.is_valid():
-            form.save()
-            return redirect("login")
+            user = form.save()
+
+            login(request, user)  # automatically sign in user after sign up
+
+            return redirect("onboarding")
 
     else:
         form = AppUserCreationForm()
@@ -271,7 +275,7 @@ def topic_results(request, user_id=None):
     return render(request, "topic_results.html", context)
 
 
-def feed_summary(request):
+def api_feed_summary(request):
     """
     GET /api/feed-summary/
 
