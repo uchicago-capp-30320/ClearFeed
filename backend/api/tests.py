@@ -243,7 +243,7 @@ class HomeSummaryTests(TestCase):
         return tweet
 
     def test_home_summary_returns_empty_payload_without_activity(self):
-        response = self.client.get("/api/home-summary/")
+        response = self.client.get("/home/")
 
         self.assertEqual(response.status_code, 200)
         self.assertEqual(
@@ -272,7 +272,7 @@ class HomeSummaryTests(TestCase):
         self._add_tweet(self.user, older_session, "tweet-1")
         self._add_tweet(self.other_user, other_session, "other-tweet")
 
-        response = self.client.get("/api/home-summary/")
+        response = self.client.get("/home/")
 
         self.assertEqual(response.status_code, 200)
         self.assertEqual(
@@ -289,7 +289,7 @@ class HomeSummaryTests(TestCase):
     def test_home_summary_requires_authentication(self):
         self.client.logout()
 
-        response = self.client.get("/api/home-summary/")
+        response = self.client.get("/home/")
 
         self.assertEqual(response.status_code, 401)
 
