@@ -444,14 +444,55 @@ class LlmAnalysisRunnerTests(TestCase):
         self._add_tweet("tweet-1", "Climate policy and clean energy")
         self._add_tweet("tweet-2", "Transit delays and city updates")
 
-        with patch(
-            "api.services.llm_analysis_runner.analyze_sampled_tweets",
-            return_value={
-                "model_name": "meta-llama/Meta-Llama-3.1-8B-Instruct",
-                "raw_output": '{"reflection":"Paragraph one.\\n\\nParagraph two."}',
-                "analysis": {"reflection": "Paragraph one.\n\nParagraph two."},
-                "parse_status": "ok",
-            },
+        with (
+            patch(
+                "api.services.llm_analysis_runner.build_feed_summary",
+                return_value={
+                    "overview": {
+                        "top_users": ["alice"],
+                        "total_tweets": 2,
+                        "since_date": "2026-05-01",
+                        "promoted_percentage": 0,
+                    },
+                    "categories": {
+                        "labels": ["Climate", "Transit"],
+                        "series": [
+                            {
+                                "name": "Topic as a Percent of Tweets",
+                                "data": [50, 50],
+                            }
+                        ],
+                    },
+                    "word_frequency": {
+                        "labels": ["climate", "policy"],
+                        "series": [
+                            {
+                                "name": "Frequency",
+                                "data": [3, 2],
+                            }
+                        ],
+                    },
+                    "sentiment": {
+                        "sentiment_average": 0.5,
+                        "labels": ["Negative", "Neutral", "Positive"],
+                        "series": [
+                            {
+                                "name": "Percentage of Tweets",
+                                "data": [0, 50, 50],
+                            }
+                        ],
+                    },
+                },
+            ),
+            patch(
+                "api.services.llm_analysis_runner.analyze_sampled_tweets",
+                return_value={
+                    "model_name": "meta-llama/Meta-Llama-3.1-8B-Instruct",
+                    "raw_output": '{"reflection":"Paragraph one.\\n\\nParagraph two."}',
+                    "analysis": {"reflection": "Paragraph one.\n\nParagraph two."},
+                    "parse_status": "ok",
+                },
+            ),
         ):
             run = run_user_llm_analysis(self.user, sample_size=10, seed=3)
 
@@ -459,6 +500,12 @@ class LlmAnalysisRunnerTests(TestCase):
         self.assertEqual(persisted.status, LLMAnalysisStatus.COMPLETE)
         self.assertEqual(persisted.sample_metadata["sample_size"], 2)
         self.assertEqual(len(persisted.sample_metadata["tweet_ids"]), 2)
+        self.assertEqual(
+            persisted.sample_metadata["prompt_context"]["feed_summary"]["overview"][
+                "total_tweets"
+            ],
+            2,
+        )
         self.assertIn("Paragraph one.", persisted.result["reflection"])
         self.assertEqual(persisted.model_name, "meta-llama/Meta-Llama-3.1-8B-Instruct")
 
