@@ -445,4 +445,36 @@
   });
 </script>
 
+<!-- Scroll Navigator -->
+<div class="scroll-nav">
+  <button class="scroll-nav-dot" data-page="page-topics" title="Topics"></button>
+  <button class="scroll-nav-dot" data-page="page-promoted" title="Promoted"></button>
+  <button class="scroll-nav-dot" data-page="page-sentiment" title="Sentiment"></button>
+  <button class="scroll-nav-dot" data-page="page-wordcloud" title="Word Cloud"></button>
+</div>
+
+<script>
+  const navDots = document.querySelectorAll('.scroll-nav-dot');
+  const pages = document.querySelectorAll('.page');
+
+  navDots.forEach(dot => {
+    dot.addEventListener('click', () => {
+      const pageId = dot.dataset.page;
+      const page = document.getElementById(pageId);
+      page.scrollIntoView({ behavior: 'smooth' });
+    });
+  });
+
+  const deck = document.getElementById('deck');
+  deck.addEventListener('scroll', () => {
+    pages.forEach((page, index) => {
+      const rect = page.getBoundingClientRect();
+      if (rect.top < window.innerHeight / 2 && rect.bottom > window.innerHeight / 2) {
+        navDots.forEach(d => d.classList.remove('active'));
+        navDots[index].classList.add('active');
+      }
+    });
+  });
+</script>
+
 {% endblock %}

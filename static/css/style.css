@@ -1127,3 +1127,71 @@ a.nav-link:hover {
     font-size: 14px;
   }
 }
+
+/* vertical scroll navigation for user summary */
+.scroll-nav {
+    position: fixed;
+    left: 24px;
+    top: 50%;
+    transform: translateY(-50%);
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+    z-index: 50;
+}
+
+.scroll-nav-dot {
+    width: 14px;
+    height: 14px;
+    border-radius: 50%;
+    border: 2px solid #0e1116;
+    background: white;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+    position: relative;
+}
+
+.scroll-nav-dot::after {
+    content: attr(title);
+    position: absolute;
+    left: 24px;
+    top: 50%;
+    transform: translateY(-50%);
+    background: #0e1116;
+    color: white;
+    padding: 4px 8px;
+    border-radius: 4px;
+    font-size: 12px;
+    white-space: nowrap;
+    opacity: 0;
+    transition: opacity 0.3s ease;
+    pointer-events: none;
+}
+
+.scroll-nav-dot:hover::after {
+    opacity: 1;
+}
+
+.scroll-nav-dot:hover {
+    background: #0e1116;
+    transform: scale(1.2);
+}
+
+.scroll-nav-dot.active {
+    background: #0e1116;
+    width: 16px;
+    height: 16px;
+}
+
+@media (max-width: 768px) {
+    .scroll-nav {
+        left: 12px;
+        gap: 12px;
+    }
+
+    .scroll-nav-dot::after {
+        left: 20px;
+        font-size: 11px;
+    }
+}
