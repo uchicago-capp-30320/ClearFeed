@@ -1127,3 +1127,30 @@ a.nav-link:hover {
     font-size: 14px;
   }
 }
+
+.page-intro {
+  background: var(--cf-bg);
+}
+
+.intro-card {
+  background: white;
+  border: 3px solid var(--cf-border);
+  border-radius: 12px;
+  padding: 48px 40px;
+  text-align: center;
+  box-shadow: 0 10px 0 rgba(33, 56, 71, 0.14);
+  max-width: 620px;
+  margin: 0 auto;
+}
+
+.intro-card h1 {
+  font-size: 44px;
+  color: var(--cf-dark);
+  margin-bottom: 20px;
+}
+
+.intro-card p {
+  color: var(--cf-muted);
+  font-size: 17px;
+  line-height: 1.7;
+}
