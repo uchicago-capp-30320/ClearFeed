@@ -5,7 +5,7 @@ from api.services.llm_analysis_runner import run_user_llm_analysis
 from api.services.ingestion import ingest_posts
 from django.contrib.auth import login
 from django.contrib.auth.decorators import login_required
-from django.db.models import Count, Max, Min
+from django.db.models import Count, Max
 from django.http import JsonResponse
 from django.shortcuts import redirect, render
 from django.views.decorators.csrf import csrf_exempt
@@ -261,6 +261,25 @@ def _get_llm_reflection_summary(user):
     }
 
 
+def _get_home_summary_stats(user):
+    total_sessions = BrowseSession.objects.filter(user=user).count()
+    total_tweets = (
+        ViewedTweet.objects.filter(user=user).values("tweet_id").distinct().count()
+    )
+    last_session_at = (
+        BrowseSession.objects.filter(user=user)
+        .aggregate(last_session=Max("created_at"))
+        .get("last_session")
+    )
+    days_since_last = (timezone.now() - last_session_at).days if last_session_at else 0
+
+    return {
+        "total_sessions": total_sessions,
+        "total_tweets": total_tweets,
+        "days_since_last": days_since_last,
+    }
+
+
 def topic_results(request, user_id=None):
     if user_id is None:
         user_id = request.session.get("user_id")
@@ -293,3 +312,23 @@ def api_feed_summary(request):
             "llm_analysis": _get_llm_reflection_summary(user),
         }
     )
+
+
+def api_home_summary(request):
+    if not request.user.is_authenticated:
+        return JsonResponse({"error": "not authenticated"}, status=401)
+
+    return JsonResponse(
+        {
+            "summary_stats": _get_home_summary_stats(request.user),
+        }
+    )
+
+
+def feed_summary(request):
+    """
+    Returns the actual feed summary page, which uses fetch to get the data from /api/feed-summary/.
+
+    User check and data acquisition occurs in api_feed_summary.
+    """
+    return render(request, "user_scroll.html")
