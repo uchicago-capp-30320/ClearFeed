@@ -1,6 +1,8 @@
 from django.test import TestCase
 from django.urls import reverse
 from unittest.mock import patch
+from datetime import timedelta
+from django.utils import timezone
 
 from .models import (
     AnalysisStatus,
@@ -217,6 +219,79 @@ class FeedSummaryTests(TestCase):
         response = self.client.get("/api/feed-summary/", {"user_id": str(self.user.id)})
 
         self.assertEqual(response.status_code, 200)
+
+
+class HomeSummaryTests(TestCase):
+    def setUp(self):
+        self.user = AppUser.objects.create()
+        self.other_user = AppUser.objects.create(email="other@example.com")
+        self.client.force_login(self.user)
+
+    def _add_session(self, user, created_at=None):
+        session = BrowseSession.objects.create(
+            user=user,
+            platform="x",
+            user_agent="test-agent",
+        )
+        if created_at is not None:
+            BrowseSession.objects.filter(id=session.id).update(created_at=created_at)
+        return session
+
+    def _add_tweet(self, user, session, tweet_id):
+        tweet = Tweet.objects.create(tweet_id=tweet_id, full_text="text")
+        ViewedTweet.objects.create(user=user, session=session, tweet=tweet)
+        return tweet
+
+    def test_home_summary_returns_empty_payload_without_activity(self):
+        response = self.client.get("/home/")
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(
+            response.json(),
+            {
+                "summary_stats": {
+                    "total_sessions": 0,
+                    "total_tweets": 0,
+                    "days_since_last": 0,
+                }
+            },
+        )
+
+    def test_home_summary_counts_sessions_tweets_and_last_session_age(self):
+        now = timezone.now()
+        recent_session = self._add_session(
+            self.user, created_at=now - timedelta(days=2)
+        )
+        older_session = self._add_session(self.user, created_at=now - timedelta(days=7))
+        other_session = self._add_session(
+            self.other_user, created_at=now - timedelta(days=1)
+        )
+
+        self._add_tweet(self.user, recent_session, "tweet-1")
+        self._add_tweet(self.user, recent_session, "tweet-2")
+        self._add_tweet(self.user, older_session, "tweet-1")
+        self._add_tweet(self.other_user, other_session, "other-tweet")
+
+        response = self.client.get("/home/")
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(
+            response.json(),
+            {
+                "summary_stats": {
+                    "total_sessions": 2,
+                    "total_tweets": 2,
+                    "days_since_last": 2,
+                }
+            },
+        )
+
+    def test_home_summary_requires_authentication(self):
+        self.client.logout()
+
+        response = self.client.get("/home/")
+
+        self.assertEqual(response.status_code, 401)
 
 
 class SessionStatusTests(TestCase):
