@@ -5,10 +5,11 @@ from api.services.llm_analysis_runner import run_user_llm_analysis
 from api.services.ingestion import ingest_posts
 from django.contrib.auth import login
 from django.contrib.auth.decorators import login_required
-from django.db.models import Count
+from django.db.models import Count, Max, Min
 from django.http import JsonResponse
 from django.shortcuts import redirect, render
 from django.views.decorators.csrf import csrf_exempt
+from django.utils import timezone
 
 from .models import (
     AppUser,
@@ -104,8 +105,9 @@ def session_status(request, session_id):
 # ----------------------------------------------------------------------
 
 
-@login_required
 def home(request):
+    if not request.user.is_authenticated:
+        return redirect("landing")
     return render(request, "home.html")
 
 

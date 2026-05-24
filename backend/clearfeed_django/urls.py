@@ -25,6 +25,7 @@ urlpatterns = [
     path(
         "api/", include("api.urls")
     ),  # anything starting with /api/ gets sent to api/urls.py
+    path("home/", views.api_home_summary, name="home_summary_api"),
     # auth-specific routing
     path("feed-summary/", views.api_feed_summary, name="feed_summary"),
     path("login/", auth_views.LoginView.as_view(), name="login"),
