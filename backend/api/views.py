@@ -110,8 +110,9 @@ def session_status(request, session_id):
 # ----------------------------------------------------------------------
 
 
-@login_required
 def home(request):
+    if not request.user.is_authenticated:
+        return redirect("landing")
     return render(request, "home.html")
 
 
