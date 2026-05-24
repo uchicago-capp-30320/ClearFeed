@@ -152,6 +152,14 @@
       throw e;
     }
 
+    /* Probably only needs one given its all or nothing, but  */
+    const hasData =
+      data.categories?.labels?.length > 0 &&
+      data.sentiment?.sentiment_average != null &&
+      data.word_frequency?.labels?.length > 0;
+
+    if (!hasData) throw new Error("No Data");
+
     topicsData = data.categories;
 
     sentimentData = {
@@ -185,6 +193,25 @@
       ul.appendChild(li);
     });
   }
+
+  /*Basic HTML page to show in case of having no data */
+  function showFallbackPage() {
+  const deck = document.getElementById('deck');
+  deck.innerHTML = `
+    <section class="page" style="display:flex; align-items:center; justify-content:center;">
+      <div style="text-align:center; max-width:480px; padding:2rem;">
+        <h1>No Feed Data</h1>
+        <p style="margin:1rem 0 1.5rem">
+          We don't have any data from your feed yet. Check out our <a href=https://clearfeed.civic.garden/onboarding/>onboarding process</a>
+           to see how you can scroll your X/Twitter feed with the extension.
+        </p>
+        <p style="margin:1rem 0 1.5rem">
+          After scrolling, refresh this page to load your report.
+        </p>
+      </div>
+    </section>
+  `;
+}
 
   /* ECharts bar */
   let barChart;
@@ -390,7 +417,8 @@
       await loadFeedSummary();
     } catch (err) {
       console.error('Failed to load feed summary:', err);
-      return;  // bail — nothing to render without data
+      showFallbackPage();  // Error handling for no data being present
+      return;
     }
 
     prepSentiment();  // fill text immediately, now that data exists
