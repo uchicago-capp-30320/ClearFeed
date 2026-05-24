@@ -6,7 +6,33 @@
 
 <div class="deck" id="deck">
 
+    <!-- PAGE 0: Intro -->
+  <section class="page page-intro" id="page-intro">
+    <div class="page-content">
+      <div class="intro-card">
+        <h1>Let's see what you see.</h1>
+        <p>
+          We analyzed your upload tweets to understand what exactly shows up among the endless scroll.
+        </p>
+      </div>
+    </div>
+  </section>
+
   <!-- PAGE 1: Topics -->
+
+  <section class="page page-intro" id="page-intro">
+    <div class="page-content">
+      <div class="intro-card">
+        <h1>What topics are presented to you the most?</h1>
+        <p>
+          Now let's start breaking down what you're seeing. First, what topics come up the most on your feed? We used
+          a model trained on X data that broke down content into Z many categories. Here's what your top five topics were,
+          and how much they made up your feed.
+        </p>
+      </div>
+    </div>
+  </section>
+
   <section class="page page-topics" id="page-topics">
     <div class="page-content">
       <h1>Your Top 5 Most Frequent Topics</h1>
@@ -17,6 +43,18 @@
   </section>
 
   <!-- PAGE 2: Promoted -->
+
+    <section class="page page-intro" id="page-intro">
+    <div class="page-content">
+      <div class="intro-card">
+        <h1>
+          Now, who is paying to get their content on your feed?
+        </h1>
+      </div>
+    </div>
+  </section>
+
+
   <section class="page page-promoted" id="page-promoted">
     <div class="page-content">
       <div class="promoted-container">
@@ -67,12 +105,24 @@
   </section>
 
   <!-- PAGE 3: Sentiment -->
+
+    <section class="page page-intro" id="page-intro">
+    <div class="page-content">
+      <div class="intro-card">
+        <h1>How do your tweets feel?</h1>
+        <p>
+          Weird question, we know. But has your feed ever left you feeling in despair? Or maybe overjoyed at something funny? We used
+          the RoBERTa model, which was trained on 124 million tweets, to analyze the sentiment of the posts on your feed.
+        </p>
+      </div>
+    </div>
+  </section>
+
   <section class="page page-sentiment" id="page-sentiment">
     <div class="page-content">
       <div class="sentiment-content">
         <div class="sentiment-header">
           <h1>Sentiment Analysis</h1>
-          <p>Understanding the tone of your feed</p>
         </div>
 
         <div class="summary-card">
@@ -110,12 +160,21 @@
   </section>
 
   <!-- PAGE 4: Word Cloud -->
+
+  <section class="page page-intro" id="page-intro">
+    <div class="page-content">
+      <div class="intro-card">
+        <h1>What words do you see the most? How do they shape your experience?</h1>
+      </div>
+    </div>
+  </section>
+
+
   <section class="page page-wordcloud" id="page-wordcloud">
     <div class="page-content">
       <div class="wordcloud-wrapper">
         <div class="wordcloud-header">
-          <h1>Word Frequency Cloud</h1>
-          <p>The most common words in your feed</p>
+          <h1>Top 20 Words in Your Feed by Frequency</h1>
         </div>
         <div class="wordcloud-container">
           <div id="wordcloud"></div>
@@ -152,6 +211,14 @@
       throw e;
     }
 
+    /* Probably only needs one given its all or nothing, but  */
+    const hasData =
+      data.categories?.labels?.length > 0 &&
+      data.sentiment?.sentiment_average != null &&
+      data.word_frequency?.labels?.length > 0;
+
+    if (!hasData) throw new Error("No Data");
+
     topicsData = data.categories;
 
     sentimentData = {
@@ -186,6 +253,25 @@
     });
   }
 
+  /*Basic HTML page to show in case of having no data */
+  function showFallbackPage() {
+  const deck = document.getElementById('deck');
+  deck.innerHTML = `
+    <section class="page" style="display:flex; align-items:center; justify-content:center;">
+      <div style="text-align:center; max-width:480px; padding:2rem;">
+        <h1>No Feed Data</h1>
+        <p style="margin:1rem 0 1.5rem">
+          We don't have any data from your feed yet. Check out our <a href=https://clearfeed.civic.garden/onboarding/>onboarding process</a>
+           to see how you can scroll your X/Twitter feed with the extension.
+        </p>
+        <p style="margin:1rem 0 1.5rem">
+          After scrolling, refresh this page to load your report.
+        </p>
+      </div>
+    </section>
+  `;
+}
+
   /* ECharts bar */
   let barChart;
   function renderTopics() {
@@ -193,7 +279,7 @@
     const el = document.getElementById('barChart');
     barChart = echarts.init(el);
 
-    const COLORS = ['#5470c6', '#91cc75', '#fac858', '#ee6666', '#73c0de'];
+    const COLORS = ['#1E3A5F', '#9B2226', '#F48C06', '#F9C74F', '#A5C8E1'];
 
     barChart.setOption({
       textStyle: { color: '#8a8fa8', fontFamily: 'sans-serif' },
@@ -201,14 +287,17 @@
       xAxis: {
         type: 'category',
         data: topicsData.labels,
-        name: "Topic Category",
-        nameLocation: "middle",
         nameGap: 23,
         axisLine: { lineStyle: { color: '#2a2d3a' } },
-        axisLabel: { color: '#8a8fa8' },
+        axisLabel: { color: '#8a8fa8',
+          interval: 0,
+          width: 90,
+          overflow: 'break',
+         },
       },
       yAxis: {
         type: 'value',
+        name: "Frequency (%)",
         splitLine: { lineStyle: { color: '#2a2d3a' } },
         axisLabel: { color: '#8a8fa8' },
       },
@@ -277,7 +366,7 @@
     const s = score.toFixed(2);
     if (cls === "positive") return `A score of ${s} suggests a positive tone — the majority of posts trend toward approval, optimism, or support.`;
     if (cls === "negative") return `A score of ${s} suggests a negative tone — most posts express disapproval, frustration, or concern.`;
-    return `A score of ${s} suggests a neutral tone — posts are largely informational or evenly split between approval and dissent.`;
+    return `A score of ${s} suggests that your posts are largely informational or evenly split between approval and dissent.`;
   }
 
   let sentimentReady = false;
@@ -293,6 +382,7 @@
 
     const overall = classifyOverall(score);
     const labelEl = document.getElementById("overall-label");
+    console.log(labelEl);
     labelEl.textContent = overall.word;
     labelEl.classList.add(overall.cls);
     document.getElementById("blurb").textContent = blurbFor(overall.cls, score);
@@ -390,7 +480,8 @@
       await loadFeedSummary();
     } catch (err) {
       console.error('Failed to load feed summary:', err);
-      return;  // bail — nothing to render without data
+      showFallbackPage();  // Error handling for no data being present
+      return;
     }
 
     prepSentiment();  // fill text immediately, now that data exists
