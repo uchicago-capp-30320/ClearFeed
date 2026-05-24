@@ -8,10 +8,11 @@ from api.services.ingestion import ingest_posts
 from api.services.wordcloud import WORDCLOUD_LIMIT, tokenize_words
 from django.contrib.auth import login
 from django.contrib.auth.decorators import login_required
-from django.db.models import Count, Min
+from django.db.models import Count, Max, Min
 from django.http import JsonResponse
 from django.shortcuts import redirect, render
 from django.views.decorators.csrf import csrf_exempt
+from django.utils import timezone
 
 from .models import (
     AnalysisStatus,
@@ -399,6 +400,25 @@ def _get_sentiment_summary(user):
     }
 
 
+def _get_home_summary_stats(user):
+    total_sessions = BrowseSession.objects.filter(user=user).count()
+    total_tweets = (
+        ViewedTweet.objects.filter(user=user).values("tweet_id").distinct().count()
+    )
+    last_session_at = (
+        BrowseSession.objects.filter(user=user)
+        .aggregate(last_session=Max("created_at"))
+        .get("last_session")
+    )
+    days_since_last = (timezone.now() - last_session_at).days if last_session_at else 0
+
+    return {
+        "total_sessions": total_sessions,
+        "total_tweets": total_tweets,
+        "days_since_last": days_since_last,
+    }
+
+
 # comprehensive view for all user-related feed analysis
 def full_analysis(request, user_id):
     user = AppUser.objects.filter(id=user_id)
@@ -449,6 +469,17 @@ def api_feed_summary(request):
             "categories": _get_topic_summary(user),
             "word_frequency": _get_word_frequency_summary(user),
             "sentiment": _get_sentiment_summary(user),
+        }
+    )
+
+
+def api_home_summary(request):
+    if not request.user.is_authenticated:
+        return JsonResponse({"error": "not authenticated"}, status=401)
+
+    return JsonResponse(
+        {
+            "summary_stats": _get_home_summary_stats(request.user),
         }
     )
 
