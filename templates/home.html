@@ -133,24 +133,75 @@
   </div>
 
   {% if user.is_authenticated %}
-  <div class="stats-container">
+  <div class="stats-container" data-stats-endpoint="/api/home-summary/">
     <div class="stat-box">
-      <div class="stat-number">8</div>
+      <div class="stat-number" id="stat-total-sessions">—</div>
       <div class="stat-label">Total no. of scrolling sessions</div>
     </div>
 
     <div class="stat-box">
-      <div class="stat-number">1,234</div>
+      <div class="stat-number" id="stat-total-tweets">—</div>
       <div class="stat-label">No. of tweets analyzed</div>
     </div>
 
     <div class="stat-box">
-      <div class="stat-number">3</div>
+      <div class="stat-number" id="stat-days-since-last">—</div>
       <div class="stat-label">Days since the last session</div>
     </div>
   </div>
   {% endif %}
 
 </div>
+
+
+{% if user.is_authenticated %}
+<script>
+  async function loadHomeSummary() {
+    /* Fetch for the data */
+    const container = document.querySelector(".stats-container");
+    if (!container) return;
+
+    const endpoint = container.dataset.statsEndpoint;
+
+    const response = await fetch("/api/home-summary/");
+    if (!response.ok) {
+      throw new Error(`HTTP error! status: ${response.status}`);
+    }
+
+    const text = await response.text();
+    let data;
+    try {
+      data = JSON.parse(text);
+    } catch (e) {
+      console.error('Response was not JSON. First 500 chars:', text.slice(0, 500));
+      throw e;
+    }
+
+    const stats = data.summary_stats || {};
+
+    const sessionsEl = document.getElementById("stat-total-sessions");
+    const tweetsEl = document.getElementById("stat-total-tweets");
+    const daysEl = document.getElementById("stat-days-since-last");
+
+    /* Basic script that catches if someone has new data or some other error like processing, just makes it look like dashes*/
+
+    if (sessionsEl && stats.total_sessions != null) {
+      sessionsEl.textContent = stats.total_sessions.toLocaleString();
+    }
+    if (tweetsEl && stats.total_tweets != null) {
+      tweetsEl.textContent = stats.total_tweets.toLocaleString();
+    }
+    if (daysEl && stats.days_since_last != null) {
+      daysEl.textContent = stats.days_since_last.toLocaleString();
+    }
+  }
+
+  document.addEventListener("DOMContentLoaded", function () {
+    loadHomeSummary().catch(function (error) {
+      console.error("Could not load home summary stats:", error);
+    });
+  });
+</script>
+{% endif %}
 
 {% endblock %}
