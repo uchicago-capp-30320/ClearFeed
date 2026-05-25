@@ -1254,3 +1254,9 @@ a.nav-link:hover {
   display: inline-block;
   vertical-align: middle;
 }
+
+.navbar-brand {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
