@@ -10,6 +10,7 @@ def run_user_llm_analysis(user, sample_size=10, seed=None):
     The runner owns persistence and status transitions. The sampling and
     prompt services stay reusable and testable on their own.
     """
+    # Create the run record first.
     run = LLMAnalysisRun.objects.create(
         user=user,
         status=LLMAnalysisStatus.QUEUED,
@@ -24,13 +25,16 @@ def run_user_llm_analysis(user, sample_size=10, seed=None):
     run.save(update_fields=["status", "updated_at"])
 
     try:
+        # Sample a bounded subset so analysis stays fast and reproducible.
         sampled_tweets = sample_user_tweets(user, sample_size=sample_size, seed=seed)
         if not sampled_tweets:
             raise ValueError("no tweets available for analysis")
 
+        # Prompt + parse happen in the analysis service; this runner just persists results.
         analysis_payload = analyze_sampled_tweets(sampled_tweets)
         run.model_name = analysis_payload.get("model_name", "")
         run.prompt_version = analysis_payload.get("prompt_version", "")
+        # Store the exact sample used for debugging and reproducibility.
         run.sample_metadata = {
             "sample_size": len(sampled_tweets),
             "tweet_ids": [tweet["tweet_id"] for tweet in sampled_tweets],
@@ -53,6 +57,7 @@ def run_user_llm_analysis(user, sample_size=10, seed=None):
         )
         return run
     except Exception as exc:
+        # Persist the failure reason before re-raising so callers can surface it.
         run.status = LLMAnalysisStatus.FAILED
         run.error_message = str(exc)
         run.save(update_fields=["status", "error_message", "updated_at"])
