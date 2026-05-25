@@ -1,6 +1,8 @@
 import json
 from datetime import datetime, timezone as dt_timezone
+
 from django.db import transaction
+
 from api.models import (
     BrowseSession,
     TwitterAuthor,
@@ -17,10 +19,23 @@ from api.tasks import enqueue_session_analysis
 def ingest_posts(body, platform, user_agent, user):
     """
     Main entry point for the ingestion pipeline.
-    Parses NDJSON body
-    Returns the completed session.
-    Raises ValueError if no valid posts are found.
-    Rolls back upload if failure mid-pipeline
+
+    Parses a raw NDJSON request body and writes all records to the database
+    inside a single atomic transaction. If anything fails mid-pipeline, the
+    entire transaction rolls back. No partial data is saved.
+
+    After a successful commit, enqueues an async analysis task via Django-Q.
+
+    Args:
+        body:       Raw NDJSON string from the extension POST request
+        platform:   Platform identifier (e.g. "X/Twitter")
+        user_agent: Browser user agent string
+        user:       Authenticated AppUser making the request
+
+    Returns:
+        (session, post_count) tuple
+    Raises:
+        ValueError: if no valid posts are found in the body
     """
     posts = _parse_ndjson(body)
     if not posts:
@@ -41,12 +56,16 @@ def ingest_posts(body, platform, user_agent, user):
 
 
 # ------------------------------------------------------------------------------
+# Step 1 — parse NDJSON
+# ------------------------------------------------------------------------------
 
 
 def _parse_ndjson(body):
     """
-    Parse raw NDJSON string into a list of Python dicts.
-    Skips malformed lines silently rather than crashing the whole request.
+    Parse a raw NDJSON string into a list of Python dicts.
+
+    Processes line by line and skips malformed lines silently rather than
+    crashing the entire request on a single bad record.
     """
     posts = []
     for line in body.strip().split("\n"):
@@ -60,10 +79,18 @@ def _parse_ndjson(body):
     return posts
 
 
+# ------------------------------------------------------------------------------
+# Step 2 — create browse session
+# ------------------------------------------------------------------------------
+
+
 def _create_session(user, platform, user_agent):
     """
-    Create a new browse session for this upload.
-    Every upload = one session record.
+    Create a new BrowseSession for this upload.
+
+    Every upload creates exactly one session record, regardless of how many
+    tweets are in it. Status starts as QUEUED and is updated by the analysis
+    worker once processing begins.
     """
     return BrowseSession.objects.create(
         user=user,
@@ -74,18 +101,23 @@ def _create_session(user, platform, user_agent):
 
 
 # ------------------------------------------------------------------------------
-# Step 3 — upsert twitter_authors
+# Step 3 — upsert Twitter authors
+# ------------------------------------------------------------------------------
 
 
 def _upsert_authors(posts):
     """
-    For each post, upsert the tweet author into twitter_author.
+    Upsert TwitterAuthor records for every post in the batch.
+
     Authors must be created before tweets because tweets FK to twitter_author.
-    Two cases:
-      - existing author: update mutable fields only, never touch account_created_at
-      - new author: create full record including account_created_at
-    Null filtering ensures we never overwrite good data with nulls from
-    incomplete Twitter API responses (e.g. thread view records).
+    Handles two cases:
+      - Existing author: update mutable fields only, never touch account_created_at
+        (that field is immutable — set once on first insert and never changed)
+      - New author: create full record including account_created_at
+
+    Null filtering on mutable fields ensures we never overwrite previously good
+    data with nulls from incomplete API responses (e.g. thread view records
+    where Twitter returns a minimal user object).
     """
     for post in posts:
         user = (
@@ -101,9 +133,7 @@ def _upsert_authors(posts):
         if not author_twitter_id:
             continue
 
-        # parse account_created_at from Twitter's date format
-        # Twitter format: "Fri Jul 22 16:50:20 +0000 2011"
-        # immutable — only set on first insert, never updated
+        # account_created_at is immutable — only set on first insert
         account_created_at = None
         raw_account_created_at = user.get("core", {}).get("created_at")
         if raw_account_created_at:
@@ -114,9 +144,7 @@ def _upsert_authors(posts):
             except ValueError:
                 account_created_at = None
 
-        # build mutable fields and filter out nulls
-        # null filtering prevents overwriting previously good data
-        # when Twitter returns incomplete user objects for some records
+        # filter out nulls before updating — never overwrite good data
         mutable_fields = {
             "screen_name": user.get("core", {}).get("screen_name"),
             "display_name": user.get("core", {}).get("name"),
@@ -146,12 +174,20 @@ def _upsert_authors(posts):
 
 # ------------------------------------------------------------------------------
 # Steps 4, 5, 6 — tweets, media, viewed_tweets
+# ------------------------------------------------------------------------------
 
 
 def _insert_tweets(posts, user, session):
     """
-    For each post, insert the tweet if new, run analysis if needed,
-    insert media, and always insert a viewed_tweet record.
+    Insert tweet records, media, and viewed_tweet records for each post.
+
+    Tweets are immutable after first insert — get_or_create skips existing
+    tweets without modifying them. This means a tweet seen by multiple users
+    is only stored once in the tweet table, but each user gets their own
+    viewed_tweet row recording their engagement stats at the moment of viewing.
+
+    Note: `user` is the logged-in AppUser. `twitter_user` is the tweet author
+    from the API response.
     """
     for post in posts:
         legacy = post.get("data", {}).get("legacy", {})
@@ -189,8 +225,7 @@ def _insert_tweets(posts, user, session):
             except ValueError:
                 tweet_created_at = None
 
-        # Step 4 — insert tweet if new, skip if already exists
-        # tweets are immutable — we never update existing tweet content
+        # Step 4 — insert tweet if new, skip if already exists (immutable)
         tweet, created = Tweet.objects.get_or_create(
             tweet_id=tweet_id,
             defaults={
@@ -214,17 +249,17 @@ def _insert_tweets(posts, user, session):
             },
         )
 
-        # Step 5 — insert media
+        # Step 5 — insert media attachments
         _insert_media(post, tweet)
 
-        # Step 6 — always insert viewed_tweet
+        # Step 6 — always insert a viewed_tweet row for this user + session
         _insert_viewed_tweet(post, legacy, tweet, user, session)
 
 
 def _insert_media(post, tweet):
     """
     Insert media items attached to this tweet.
-    Uses extended_entities (not entities) for full video variant info.
+
     Keyed by media_key — same media shared across tweets is only stored once.
     """
     media_items = (
@@ -253,11 +288,14 @@ def _insert_media(post, tweet):
 
 def _insert_viewed_tweet(post, legacy, tweet, user, session):
     """
-    Always insert a new viewed_tweet row regardless of whether the tweet
-    is new or already existed. Records this user seeing this tweet in this
-    session with engagement stats at the moment of viewing.
-    The same tweet can have many viewed_tweet rows across users and sessions.
-    Stores full raw_data as backup for re-parsing if fields are missed.
+    Inserts a new viewed_tweet row for this user + session.
+
+    Records the user seeing this tweet in this session, along with engagement
+    stats at the exact moment of viewing. The same tweet can have many
+    viewed_tweet rows across different users and sessions.
+
+    Stores raw_data as a backup for re-parsing if fields are missed or
+    the data model changes later.
     """
     ViewedTweet.objects.create(
         user=user,
@@ -275,14 +313,18 @@ def _insert_viewed_tweet(post, legacy, tweet, user, session):
 
 
 # ------------------------------------------------------------------------------
-# Step 7 — mark session complete
+# Step 7 — queue session for analysis
+# ------------------------------------------------------------------------------
 
 
 def _queue_session(session):
     """
-    After successful ingestion, mark the session as queued for analysis and
-    enqueue the async worker once the database transaction commits.
-    updated_at is set automatically by auto_now=True on the model.
+    Mark the session as queued and enqueue an async analysis task.
+
+    enqueue_session_analysis() uses transaction.on_commit() internally, which
+    ensures the Django-Q task is only queued after the database transaction
+    successfully commits. This prevents the worker from picking up a task
+    before the tweets are actually written to the database.
     """
     session.status = SessionStatus.QUEUED
     session.save()

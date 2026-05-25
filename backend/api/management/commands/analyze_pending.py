@@ -8,6 +8,10 @@ class Command(BaseCommand):
     help = "Run analysis on all tweets with status pending or failed"
 
     def handle(self, *args, **options):
+        # ----------------------------------------------------------------------
+        # Step 1 — find tweets that need analysis
+        # ----------------------------------------------------------------------
+
         tweets = list(
             Tweet.objects.filter(
                 analysis_status__in=[
@@ -25,7 +29,10 @@ class Command(BaseCommand):
             self.stdout.write(self.style.SUCCESS("Nothing to do"))
             return
 
-        # find all sessions that have pending tweets and mark them analyzing
+        # ----------------------------------------------------------------------
+        # Step 2 — mark affected sessions as analyzing
+        # ----------------------------------------------------------------------
+
         session_ids = list(
             ViewedTweet.objects.filter(tweet__in=tweets)
             .values_list("session_id", flat=True)
@@ -36,22 +43,28 @@ class Command(BaseCommand):
             status=SessionStatus.ANALYZING
         )
 
-        # analyze each tweet
+        # ----------------------------------------------------------------------
+        # Step 3 — run NLP analysis on each tweet
+        # ----------------------------------------------------------------------
+
         for i, tweet in enumerate(tweets, 1):
             self.stdout.write(f"[{i}/{total}] Analyzing tweet {tweet.tweet_id}...")
             analyze_tweet(tweet)
             status = Tweet.objects.get(tweet_id=tweet.tweet_id).analysis_status
             self.stdout.write(f"  → {status}")
 
-        # after all tweet processed, check each session
+        # ----------------------------------------------------------------------
+        # Step 4 — update session statuses and run LLM analysis
+        # ----------------------------------------------------------------------
+
         for session_id in session_ids:
             session = BrowseSession.objects.get(id=session_id)
+
             tweet_ids = list(
                 ViewedTweet.objects.filter(session=session)
                 .values_list("tweet_id", flat=True)
                 .distinct()
             )
-
             unfinished = Tweet.objects.filter(
                 tweet_id__in=tweet_ids,
                 analysis_status__in=[
