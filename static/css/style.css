@@ -1246,3 +1246,11 @@ a.nav-link:hover {
 .logout-btn:focus {
   outline: none;
 }
+
+/* Navbar Logo */
+.navbar-logo {
+  height: 30px;
+  margin-right: 10px;
+  display: inline-block;
+  vertical-align: middle;
+}
