@@ -53,7 +53,10 @@
             <span class="icon-bar"></span>
             <span class="icon-bar"></span>
           </button>
-          <a class="navbar-brand" href="{% url 'landing' %}">ClearFeed</a>
+          <a class="navbar-brand" href="{% url 'landing' %}">
+            <img src="{% static 'images/logo-no-title.png' %}" alt="ClearFeed Logo" class="navbar-logo">
+            ClearFeed
+          </a>
         </div>
         <div class="collapse navbar-collapse" id="mainNavBar">
           <!--Would be nice to order this with Privacy and Onboarding on the right side away from the user stuff-->
@@ -67,7 +70,7 @@
             <li>
               <form method="post" action="{% url 'logout' %}" style="display:inline;">
                 {% csrf_token %}
-                <button type="submit">
+                <button type="submit" class="logout-btn">
                   <span class="glyphicon glyphicon-log-out"></span> Logout
                 </button>
               </form>
