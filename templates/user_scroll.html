@@ -183,6 +183,15 @@
     </div>
   </section>
 
+  <section class="page page-intro" id="page-summary">
+    <div class="page-content">
+      <div class="intro-card">
+        <h1>Here's your final summary:</h1>
+        <p id="reflectionText">Generating your summary…</p>
+      </div>
+    </div>
+  </section>
+
 </div>
 
 <div class="tooltip" id="tooltip"></div>
@@ -207,7 +216,7 @@
 <script>
   /* Data containers populated by the fetch */
   let topicsData, sentimentData, wordcloudData, promotedPercentage;
-  let overviewData;
+  let overviewData, llmAnalysisData;
 
   async function loadFeedSummary() {
     const response = await fetch("/api/feed-summary/");
@@ -225,7 +234,7 @@
 
     /* Probably only needs one given its all or nothing, but  */
     const hasData =
-      data.categories?.labels?.length > 0 &&
+      /* data.categories?.labels?.length > 0 && */
       data.sentiment?.sentiment_average != null &&
       data.word_frequency?.labels?.length > 0;
 
@@ -247,6 +256,7 @@
     overviewData = data.overview;
     promotedPercentage = data.overview.promoted_percentage;
     populatePromotedText(data.overview);
+    populateReflection(data.llm_analysis);
   }
 
   function populatePromotedText(overview) {
@@ -546,6 +556,17 @@
         }
       });
     });
+
+    function populateReflection(llm) {
+    const el = document.getElementById('reflectionText');
+
+    // status === 'complete' (or any done state) with a reflection
+    if (llm.reflection && llm.reflection.trim()) {
+      el.textContent = llm.reflection;
+    } else {
+      el.textContent = "No summary is available for your feed.";
+    }
+  }
 
 </script>
 
