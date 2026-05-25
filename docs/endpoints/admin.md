@@ -4,7 +4,7 @@ The following endpoints support administrative and non-analysis-related pages wi
 
 ---
 
-## `/home`
+## `/landing`
 
 ### Parameters
 - None
@@ -56,13 +56,24 @@ The following endpoints support administrative and non-analysis-related pages wi
 
 ---
 
-## `/tutorial`
+## `/onboarding`
 
 ### Parameters
 - None
 
 ### Response
-- `tutorial.html`: HTML page providing a brief tutorial on using the application and browser extension
+- `onboarding.html`: HTML page providing a brief tutorial on using the application and browser extension
 
 ### Template Context Variables
 - None
+
+## `/signup`
+
+### Parameters
+- None
+
+### Response
+- `registration/signup.html`: HTML that provides a form for creating an account for the website
+
+### Template Context Variables
+- `form` (`AppUserCreationForm`): The user creation form. On `GET`, an unbound empty form instance. On `POST` with invalid data, a bound form instance containing validation errors.
