@@ -28,43 +28,82 @@ class LlmPromptingTests(SimpleTestCase):
                 "is_reply": True,
             },
         ]
+        self.feed_summary = {
+            "overview": {
+                "top_users": ["alice"],
+                "total_tweets": 2,
+                "since_date": "2026-05-01",
+                "promoted_percentage": 0,
+            },
+            "categories": {
+                "labels": ["Climate", "Transit"],
+                "series": [
+                    {
+                        "name": "Topic as a Percent of Tweets",
+                        "data": [50, 50],
+                    }
+                ],
+            },
+            "word_frequency": {
+                "labels": ["climate", "policy"],
+                "series": [
+                    {
+                        "name": "Frequency",
+                        "data": [3, 2],
+                    }
+                ],
+            },
+            "sentiment": {
+                "sentiment_average": 0.5,
+                "labels": ["Negative", "Neutral", "Positive"],
+                "series": [
+                    {
+                        "name": "Percentage of Tweets",
+                        "data": [0, 50, 50],
+                    }
+                ],
+            },
+        }
 
-    def test_build_analysis_prompt_includes_sample_context(self):
-        prompt = build_analysis_prompt(self.sample)
+    def test_build_analysis_prompt_includes_sample_and_feed_context(self):
+        prompt = build_analysis_prompt(self.sample, feed_summary=self.feed_summary)
 
-        self.assertIn("return JSON only", prompt)
+        self.assertIn("Return JSON only", prompt)
+        self.assertIn("Feed-wide stats:", prompt)
+        self.assertIn("total tweets 2", prompt)
+        self.assertIn("Climate (50%)", prompt)
+        self.assertIn("climate (3)", prompt)
         self.assertIn("Sample size: 2", prompt)
         self.assertIn("@alice (Alice)", prompt)
         self.assertIn("Climate policy and clean energy", prompt)
 
     def test_parse_analysis_output_prefers_json(self):
         parsed = parse_analysis_output(
-            '{"title":"Feed pulse","themes":["policy"],"patterns":["replies"],"surprises":["dense"],"follow_up_question":"What else?"}'
+            '{"reflection":"Paragraph one.\\n\\nParagraph two."}'
         )
 
-        self.assertEqual(parsed["title"], "Feed pulse")
-        self.assertEqual(parsed["themes"], ["policy"])
-        self.assertEqual(parsed["patterns"], ["replies"])
-        self.assertEqual(parsed["surprises"], ["dense"])
-        self.assertEqual(parsed["follow_up_question"], "What else?")
+        self.assertEqual(parsed["reflection"], "Paragraph one.\n\nParagraph two.")
 
     def test_analyze_sampled_tweets_returns_structured_payload(self):
         with patch(
             "api.services.llm_prompting.get_llm_generator",
             return_value=lambda prompt, **kwargs: [
                 {
-                    "generated_text": '{"title":"Feed pulse","themes":["policy"],"patterns":["replies"],"surprises":["dense"],"follow_up_question":"What else?"}'
+                    "generated_text": '{"reflection":"Paragraph one.\\n\\nParagraph two."}'
                 }
             ],
         ):
-            payload = analyze_sampled_tweets(self.sample)
+            payload = analyze_sampled_tweets(
+                self.sample, feed_summary=self.feed_summary
+            )
 
-        self.assertEqual(payload["model_name"], "google/flan-t5-small")
-        self.assertEqual(payload["prompt_version"], "v1")
+        self.assertEqual(payload["model_name"], "microsoft/Phi-3.5-mini-instruct")
         self.assertEqual(payload["parse_status"], "ok")
-        self.assertEqual(payload["analysis"]["title"], "Feed pulse")
-        self.assertEqual(payload["analysis"]["themes"], ["policy"])
+        self.assertEqual(
+            payload["analysis"]["reflection"], "Paragraph one.\n\nParagraph two."
+        )
         self.assertTrue(payload["prompt"])
+        self.assertIn("Feed-wide stats:", payload["prompt"])
 
     def test_analyze_sampled_tweets_falls_back_on_errors(self):
         with patch(
@@ -74,5 +113,5 @@ class LlmPromptingTests(SimpleTestCase):
             payload = analyze_sampled_tweets(self.sample)
 
         self.assertEqual(payload["parse_status"], "fallback")
-        self.assertEqual(payload["analysis"]["title"], "Feed snapshot")
+        self.assertTrue(payload["analysis"]["reflection"])
         self.assertIn("fallback_reason", payload["analysis"])

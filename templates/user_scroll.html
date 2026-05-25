@@ -183,6 +183,29 @@
     </div>
   </section>
 
+   <!-- PAGE 4: LLM Analysis -->
+
+  <section class="page page-intro" id="page-intro">
+    <div class="page-content">
+      <div class="intro-card">
+        <h1>Who does your feed think you are?</h1>
+        <p>
+          We took a random selection of 50 of your tweets and prompted a local LLM model to imagine who you were based on them. Are you a Meme-Savvy Adventurer, or
+          a Sports Fanatic with a Soft Side for Cat Picture? Let's find out:
+        </p>
+      </div>
+    </div>
+  </section>
+
+  <section class="page page-intro" id="page-summary">
+    <div class="page-content">
+      <div class="intro-card">
+        <h1>Here's your final summary:</h1>
+        <p id="reflectionText">Generating your summary…</p>
+      </div>
+    </div>
+  </section>
+
 </div>
 
 <div class="tooltip" id="tooltip"></div>
@@ -207,7 +230,7 @@
 <script>
   /* Data containers populated by the fetch */
   let topicsData, sentimentData, wordcloudData, promotedPercentage;
-  let overviewData;
+  let overviewData, llmAnalysisData;
 
   async function loadFeedSummary() {
     const response = await fetch("/api/feed-summary/");
@@ -231,6 +254,8 @@
 
     if (!hasData) throw new Error("No Data");
 
+    /* Splitting the data up by type and wear its going */
+
     topicsData = data.categories;
 
     sentimentData = {
@@ -247,22 +272,7 @@
     overviewData = data.overview;
     promotedPercentage = data.overview.promoted_percentage;
     populatePromotedText(data.overview);
-  }
-
-  function populatePromotedText(overview) {
-    const tb1 = document.getElementById('textBlock1');
-    tb1.innerHTML =
-      `Of the ${overview.total_tweets} tweets that you've viewed since ` +
-      `${overview.since_date}, <strong>${overview.promoted_percentage}%</strong> ` +
-      `of them were labeled as Promoted.`;
-
-    const ul = document.getElementById('usersList');
-    ul.innerHTML = '';
-    overview.top_users.forEach((user, i) => {
-      const li = document.createElement('li');
-      li.textContent = `${i + 1}. ${user}`;
-      ul.appendChild(li);
-    });
+    populateReflection(data.llm_analysis);
   }
 
   /*Basic HTML page to show in case of having no data */
@@ -282,7 +292,24 @@
       </div>
     </section>
   `;
-}
+  }
+
+  /*Getting the text to drop in the promoted section*/
+  function populatePromotedText(overview) {
+    const tb1 = document.getElementById('textBlock1');
+    tb1.innerHTML =
+      `Of the ${overview.total_tweets} tweets that you've viewed since ` +
+      `${overview.since_date}, <strong>${overview.promoted_percentage}%</strong> ` +
+      `of them were labeled as Promoted.`;
+
+    const ul = document.getElementById('usersList');
+    ul.innerHTML = '';
+    overview.top_users.forEach((user, i) => {
+      const li = document.createElement('li');
+      li.textContent = `${i + 1}. ${user}`;
+      ul.appendChild(li);
+    });
+  }
 
   /* ECharts bar */
   let barChart;
@@ -349,6 +376,8 @@
       userInterval: 500
     };
 
+    /*the setTimeout creates the small gap in the animations */
+
     setTimeout(() => dollarSvg.classList.add('visible'), TIMING.dollarFadeIn);
 
     setTimeout(() => {
@@ -382,6 +411,8 @@
   }
 
   let sentimentReady = false;
+
+  /*Helper function that sets all of the dynamics used in the sentiment dial */
   function prepSentiment() {
     if (sentimentReady) return;
     sentimentReady = true;
@@ -399,6 +430,8 @@
     labelEl.classList.add(overall.cls);
     document.getElementById("blurb").textContent = blurbFor(overall.cls, score);
   }
+
+  /*Boolean check makes sure that the animation only happens once and stick there*/
 
   let sentimentAnimated = false;
   function animateSentiment() {
@@ -546,6 +579,17 @@
         }
       });
     });
+
+    function populateReflection(llm) {
+    const el = document.getElementById('reflectionText');
+
+    // status === 'complete' (or any done state) with a reflection
+    if (llm.reflection && llm.reflection.trim()) {
+      el.textContent = llm.reflection;
+    } else {
+      el.textContent = "No summary is available for your feed.";
+    }
+  }
 
 </script>
 

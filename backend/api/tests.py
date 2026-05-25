@@ -151,6 +151,48 @@ class FeedSummaryTests(TestCase):
                 ],
             },
         )
+        self.assertEqual(
+            payload["llm_analysis"],
+            {
+                "status": "not_started",
+                "reflection": "",
+                "run_id": None,
+            },
+        )
+
+    def test_feed_summary_includes_latest_llm_reflection(self):
+        self._add_tweet(
+            "tweet-1",
+            "Future climate policy future",
+            "cats",
+            "positive",
+            promoted=True,
+            author=self.author,
+        )
+        run = LLMAnalysisRun.objects.create(
+            user=self.user,
+            status=LLMAnalysisStatus.COMPLETE,
+            sample_size=10,
+            sample_seed=None,
+            model_name="meta-llama/Meta-Llama-3.1-8B-Instruct",
+            sample_metadata={"sample_size": 1, "tweet_ids": ["tweet-1"]},
+            result={"reflection": "A thoughtful reflection on the feed."},
+            raw_output='{"reflection":"A thoughtful reflection on the feed."}',
+        )
+
+        response = self.client.get("/api/feed-summary/")
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(
+            response.json()["llm_analysis"],
+            {
+                "status": "complete",
+                "reflection": "A thoughtful reflection on the feed.",
+                "run_id": str(run.id),
+                "model_name": "meta-llama/Meta-Llama-3.1-8B-Instruct",
+                "created_at": response.json()["llm_analysis"]["created_at"],
+            },
+        )
 
     def test_feed_summary_returns_empty_payload_without_tweets(self):
         response = self.client.get("/api/feed-summary/")
@@ -477,21 +519,55 @@ class LlmAnalysisRunnerTests(TestCase):
         self._add_tweet("tweet-1", "Climate policy and clean energy")
         self._add_tweet("tweet-2", "Transit delays and city updates")
 
-        with patch(
-            "api.services.llm_analysis_runner.analyze_sampled_tweets",
-            return_value={
-                "model_name": "google/flan-t5-small",
-                "prompt_version": "v1",
-                "raw_output": '{"title":"Feed pulse"}',
-                "analysis": {
-                    "title": "Feed pulse",
-                    "themes": ["policy"],
-                    "patterns": ["replies"],
-                    "surprises": ["dense"],
-                    "follow_up_question": "What else?",
+        with (
+            patch(
+                "api.services.llm_analysis_runner.build_feed_summary",
+                return_value={
+                    "overview": {
+                        "top_users": ["alice"],
+                        "total_tweets": 2,
+                        "since_date": "2026-05-01",
+                        "promoted_percentage": 0,
+                    },
+                    "categories": {
+                        "labels": ["Climate", "Transit"],
+                        "series": [
+                            {
+                                "name": "Topic as a Percent of Tweets",
+                                "data": [50, 50],
+                            }
+                        ],
+                    },
+                    "word_frequency": {
+                        "labels": ["climate", "policy"],
+                        "series": [
+                            {
+                                "name": "Frequency",
+                                "data": [3, 2],
+                            }
+                        ],
+                    },
+                    "sentiment": {
+                        "sentiment_average": 0.5,
+                        "labels": ["Negative", "Neutral", "Positive"],
+                        "series": [
+                            {
+                                "name": "Percentage of Tweets",
+                                "data": [0, 50, 50],
+                            }
+                        ],
+                    },
                 },
-                "parse_status": "ok",
-            },
+            ),
+            patch(
+                "api.services.llm_analysis_runner.analyze_sampled_tweets",
+                return_value={
+                    "model_name": "meta-llama/Meta-Llama-3.1-8B-Instruct",
+                    "raw_output": '{"reflection":"Paragraph one.\\n\\nParagraph two."}',
+                    "analysis": {"reflection": "Paragraph one.\n\nParagraph two."},
+                    "parse_status": "ok",
+                },
+            ),
         ):
             run = run_user_llm_analysis(self.user, sample_size=10, seed=3)
 
@@ -499,9 +575,14 @@ class LlmAnalysisRunnerTests(TestCase):
         self.assertEqual(persisted.status, LLMAnalysisStatus.COMPLETE)
         self.assertEqual(persisted.sample_metadata["sample_size"], 2)
         self.assertEqual(len(persisted.sample_metadata["tweet_ids"]), 2)
-        self.assertEqual(persisted.result["title"], "Feed pulse")
-        self.assertEqual(persisted.model_name, "google/flan-t5-small")
-        self.assertEqual(persisted.prompt_version, "v1")
+        self.assertEqual(
+            persisted.sample_metadata["prompt_context"]["feed_summary"]["overview"][
+                "total_tweets"
+            ],
+            2,
+        )
+        self.assertIn("Paragraph one.", persisted.result["reflection"])
+        self.assertEqual(persisted.model_name, "meta-llama/Meta-Llama-3.1-8B-Instruct")
 
     def test_run_user_llm_analysis_marks_failed_when_no_tweets_exist(self):
         with self.assertRaises(ValueError):
@@ -550,11 +631,10 @@ class LlmAnalysisEndpointTests(TestCase):
                 status=LLMAnalysisStatus.COMPLETE,
                 sample_size=10,
                 sample_seed=None,
-                model_name="google/flan-t5-small",
-                prompt_version="v1",
+                model_name="meta-llama/Meta-Llama-3.1-8B-Instruct",
                 sample_metadata={"sample_size": 1, "tweet_ids": ["tweet-1"]},
-                result={"title": "Feed pulse"},
-                raw_output='{"title":"Feed pulse"}',
+                result={"reflection": "Paragraph one.\n\nParagraph two."},
+                raw_output='{"reflection":"Paragraph one.\\n\\nParagraph two."}',
             ),
         ):
             response = self.client.post(
@@ -573,8 +653,7 @@ class LlmAnalysisEndpointTests(TestCase):
             status=LLMAnalysisStatus.COMPLETE,
             sample_size=10,
             sample_seed=None,
-            model_name="google/flan-t5-small",
-            prompt_version="v1",
+            model_name="meta-llama/Meta-Llama-3.1-8B-Instruct",
             sample_metadata={},
             result={},
             raw_output="",
