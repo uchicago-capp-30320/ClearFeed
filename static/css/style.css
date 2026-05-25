@@ -1222,3 +1222,27 @@ a.nav-link:hover {
         font-size: 11px;
     }
 }
+
+/* Logout Button */
+.logout-btn {
+  background: none;
+  border: none;
+  color: #9d9d9d;
+  text-decoration: none;
+  font-weight: 400;
+  cursor: pointer;
+  font-size: 16px;
+  padding: 14px 0;
+  margin: 0;
+  font-family: Helvetica, Arial, sans-serif;
+  transition: color 0.2s ease;
+}
+
+.logout-btn:hover {
+  color: white;
+  text-decoration: none;
+}
+
+.logout-btn:focus {
+  outline: none;
+}
