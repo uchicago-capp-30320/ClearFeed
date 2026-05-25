@@ -155,11 +155,14 @@ The `qcluster` worker runs as a persistent systemd user service on the server.
 ---
 
 ### 8. Frontend
-Plain HTML, CSS, and JavaScript. Pages extend `base.html` and fetch data from Django API endpoints. Charts rendered via Apache ECharts.
+Plain HTML, CSS, and JavaScript. Pages extend `base.html` and fetch data from Django API endpoints.
 
 Key pages:
-- `/` — home page with user stats and scroll nudge
+- `/` — home page with basic user stats and scroll nudge
 - `/feed-summary/` — scrollable multi-section feed analysis dashboard
+
+The feed summary uses a variety of graphics to represent user data, including a bar chart created through Apache ECharts and a Wordcloud based on a D3 plug-in by Jason Davies. The dollar sign animation and the sentiment dial were built in-house.
+
 - `/onboarding/` — step-by-step setup guide with Firefox detection and extension install link
 - `/landing/` — public landing page for unauthenticated users
 - `/privacy/` — privacy policy

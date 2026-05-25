@@ -22,7 +22,7 @@ The following endpoints support data ingestion and analysis-related pages within
 
 ---
 
-## `/analysis`
+## `/feed-summary`
 
 ### Parameters
 - `user_id`: Primary key for `AppUser`
@@ -36,34 +36,6 @@ The following endpoints support data ingestion and analysis-related pages within
 - `topic_results`: list of `TopicResult` objects  
 - `political_leaning_results`: list of `PoliticalLeaningResult` objects  
 - `toxicity_results`: list of `ToxicityResult` objects  
-
----
-
-## `/sentiment`
-
-### Parameters
-- `user_id`: Primary key for `AppUser`
-
-### Response
-- `sentiment.html`: HTML page displaying sentiment-specific analysis of user's feed data
-
-### Template Context Variables
-- `user`: corresponding `AppUser` object  
-- `sentiment_results`: list of `SentimentResult` objects  
-
----
-
-## `/topics`
-
-### Parameters
-- `user_id`: Primary key for `AppUser`
-
-### Response
-- `topics.html`: HTML page displaying topic-specific analysis of user's feed data
-
-### Template Context Variables
-- `user`: corresponding `AppUser` object  
-- `topic_results`: list of `TopicResult` objects  
 
 ---
 
@@ -119,28 +91,28 @@ The following endpoints support data ingestion and analysis-related pages within
 
 ---
 
-## `/political_leaning`
+## `/home`
 
 ### Parameters
-- `user_id`: Primary key for `AppUser`
+- Authenticated `AppUser` from the current request session
 
 ### Response
-- `political_leaning.html`: HTML page displaying political identity analysis of user's feed data
+- JSON Payload for Basic User Summary Statistics
+
+```json
+{
+  "summary_stats": {
+    "total_sessions": 2, 
+    "total_tweets": 70, 
+    "days_since_last": 9
+  }
+}
+```
 
 ### Template Context Variables
-- `user`: corresponding `AppUser` object  
-- `political_leaning_results`: list of `PoliticalLeaningResult` objects  
+- None
 
 ---
 
-## `/toxicity`
 
-### Parameters
-- `user_id`: Primary key for `AppUser`
 
-### Response
-- `toxicity.html`: HTML page displaying toxicity-specific analysis of user's feed data
-
-### Template Context Variables
-- `user`: corresponding `AppUser` object  
-- `toxicity_results`: list of `ToxicityResult` objects  
