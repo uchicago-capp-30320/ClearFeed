@@ -78,7 +78,7 @@ def build_analysis_prompt(tweets, feed_summary=None):
         "Return JSON only, no markdown fences, using this exact schema:\n"
         "{\n"
         "  \"title\": \"a 4-7 word punchy label for this person (e.g. 'Reluctant Optimist Who Hate-Reads Finance Twitter', 'Chaotic Intellectual With a Meme Problem')\",\n"
-        '  "reflection": "Start with a punchy one-liner. Then 2-3 paragraphs. End with a single-sentence verdict that sounds like a fortune cookie written by someone who is tired of your nonsense."\n'
+        '  "reflection": "Start with a punchy one-liner. Then 2-3 paragraphs. End with a single-sentence verdict that sounds like a fortune cookie written by someone who is tired of your nonsense. Less than 120 words."\n'
         "}\n\n"
         f"{feed_context}"
         f"Sample size: {len(tweets)}\n"
