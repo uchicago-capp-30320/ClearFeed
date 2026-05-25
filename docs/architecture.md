@@ -2,184 +2,187 @@
 
 ## What is ClearFeed?
 
-ClearFeed is a social media feed analysis tool. Users browse Twitter/X normally in Firefox, then click "To FeedFreak" in a browser extension to upload what they saw. The Django backend stores the data and runs NLP analysis on each tweet. A plain HTML frontend will display these model results and other basic statistics in the dashboards. Users will be able to review an overarching feed analysis dashboard, as well as analyses on specific browsing sessions.
+ClearFeed is a social media feed analysis tool. Users browse Twitter/X normally in Firefox, then click "To ClearFeed" in the ClearFeed Capture browser extension to upload what they saw. The Django backend ingests the data, runs NLP analysis on each tweet, and serves analysis dashboards showing what the user has been exposed to across their browsing sessions.
 
 ---
 
 ## High-Level Data Flow
 
 ```
-User browses Twitter in Firefox
+User browses Twitter/X in Firefox
         ↓
-Zeeschuimer extension captures NDJSON in the background
+ClearFeed Capture extension captures NDJSON in the background
         ↓
 User clicks "To ClearFeed" in the extension popup
         ↓
 Extension POSTs raw NDJSON to Django at /api/import-dataset/
+with session cookie via credentials: 'include'
         ↓
-Django ingestion pipeline (views.py) parses and stores data in PostgreSQL (Railway)
+import_dataset() authenticates user via session cookie
         ↓
-NLP analysis runs synchronously during ingestion (sentiment, toxicity, topic)
+ingest_posts() runs inside transaction.atomic()
+  1. Parse NDJSON
+  2. Create BrowseSession
+  3. Upsert TwitterAuthors
+  4. Insert Tweets, TweetMedia, ViewedTweets
+  5. Queue session for analysis
         ↓
-Results stored in analysis result tables
+transaction.on_commit() fires → Django-Q task queued in Postgres
         ↓
-HTML frontend queries Django API endpoints to display dashboards
+qcluster worker picks up → analyze_session() runs NLP models
+        ↓
+Results stored in SentimentResult, TopicResult
+        ↓
+LLM blurb generated and stored in LLMAnalysisRun
+        ↓
+Frontend queries /api/feed-summary/ to display dashboards
 ```
 
 ---
 
 ## Components
 
-### 1. Zeeschuimer Firefox Extension
-**Repo:** https://github.com/teddykolios11/capp-zeeschuimer
+### 1. ClearFeed Capture Browser Extension
+**Repo:** https://github.com/teddykolios11/ClearFeed-Capture
 
-This is a fork of the open-source Zeeschuimer extension, modified to send data to ClearFeed instead of 4CAT. As the user scrolls Twitter, the extension intercepts Twitter's internal API responses and stores them locally as NDJSON (newline-delimited JSON). When the user clicks "To ClearFeed", the extension POSTs the collected NDJSON as a raw blob to `http://localhost:8000/api/import-dataset/` with an `X-Zeeschuimer-Platform` header identifying the platform.
+A fork of the open-source [Zeeschuimer](https://github.com/digitalmethodsinitiative/zeeschuimer) extension, modified to send data to ClearFeed instead of 4CAT. As the user scrolls Twitter, the extension intercepts Twitter's internal API responses and stores them locally as NDJSON. When the user clicks "To ClearFeed", the extension POSTs the collected NDJSON as a raw blob to `/api/import-dataset/`.
 
 Key files:
-- `popup/interface.js` — handles the upload button and fetch POST
-- `popup/interface.html` — the extension popup UI
-
-#### Changes from upstream Zeeschuimer
-- `manifest.json` — removed `update_url` from `browser_specific_settings.gecko` (required by Mozilla for unsigned local extensions); added `id` field: `clearfeed-zeeschuimer@clearfeed.com`
-- `popup/interface.html` — removed entire "Connect to 4CAT" section including the URL input field; moved upload-status paragraph inside the status section so progress messages still display correctly
-- `popup/interface.js` — added `const CLEARFEED_URL = 'http://localhost:8000'`; modified `activate_buttons()` to remove `have_4cat` dependency so "To FeedFreak" button enables based only on whether items exist; replaced the upload-to-4cat XHR block with a simple `fetch` POST to `/api/import-dataset/` sending raw NDJSON blob with `X-Zeeschuimer-Platform` header; removed two lines from `DOMContentLoaded` that referenced the now-deleted `#fourcat-url` input
-
-#### Open TODOs — Extension
-- [ ] Set up `develop`/`main` branches and branch protection rules in forked Zeeschuimer extension repo
-- [ ] Clarify with James where this fits in the overall architecture
-- [ ] Auto-clear extension local data after a successful upload so each new browsing session starts fresh; this prevents duplicate sessions where posts were already uploaded (this happens when one browsing session starts where the last one ended)
-- [ ] Remove platform options we aren't processing — keep only Twitter/X
-- [ ] Remove "Uploaded Datasets" section from the extension UI
-- [ ] Reformat UI to ClearFeed branding — decide whether to keep the Zeeschuimer name or rebrand
+- `popup/interface.js` — upload button logic, fetch POST, error handling         auto-delete after upload
+- `popup/interface.html` — extension popup UI with ClearFeed branding
+- `manifest.json` — extension configuration, scoped to Twitter/X only
+- `modules/twitter.js` — Twitter API response interceptor
 
 ---
 
-### 2. Django Backend
+### 2. The Ingestion Pipeline
+
+The core of the backend is `ingest_posts()` in `backend/api/services/ingestion.py`, called by the `import_dataset` view every time the extension uploads data. The entire pipeline runs inside `transaction.atomic()` — if anything fails mid-pipeline, all writes roll back and no partial data is saved.
+
+**Step 1 — Authentication:** `import_dataset` checks `request.user.is_authenticated` via the session cookie sent by the extension. Returns 401 immediately if not logged in.
+
+**Step 2 — Browse Session:** Creates a new `BrowseSession` record with status `QUEUED`. Every upload = one session.
+
+**Step 3 — Twitter Authors:** For each post, upserts the tweet author into `twitter_author`. If the author already exists, updates mutable fields (followers count, bio, screen name etc.) while leaving `account_created_at` immutable. Null filtering ensures we never overwrite good data with incomplete API responses.
+
+**Step 4 — Tweets:** Inserts each tweet via `get_or_create` — tweets are immutable after first insert. If the tweet has been seen before (by any user, in any session) it is skipped. The `promoted` field is set here based on whether Twitter flagged the tweet as a paid ad.
+
+**Step 5 — Tweet Media:** Stores photos and videos attached to each tweet, keyed by `media_key`. The same media shared across multiple tweets is stored only once.
+
+**Step 6 — Viewed Tweets:** Always inserts a new row recording this user seeing this tweet in this session, with engagement stats (likes, retweets, views) captured at the moment of viewing. The same tweet can have many `viewed_tweet` rows across users and sessions.
+
+**Step 7 — Queue Analysis:** Marks the session as `QUEUED` and enqueues an async `analyze_session` task via Django-Q. Uses `transaction.on_commit()` so the task is only queued after all writes are committed — preventing the worker from picking up the task before tweets exist in the database. A second `on_commit` callback invalidates the feed summary cache so the user sees updated stats immediately.
+
+---
+
+### 3. Django Backend
 **Location:** `backend/` in the main ClearFeed repo
 
-The backend is a Django application connected to a PostgreSQL database hosted on Railway. It has one primary endpoint today:
-
-- `POST /api/import-dataset/` — receives NDJSON from the extension, runs the ingestion pipeline, and triggers NLP analysis synchronously
-
-The backend is also responsible for serving API endpoints to the HTML frontend (in progress).
+Django application connected to a PostgreSQL database on the server at `clearfeed.civic.garden`. Served via Gunicorn on port 8010, proxied by Caddy.
 
 ---
 
-### 3. PostgreSQL Database (Railway)
-The database has 10 tables. See `decisions/schema.md` for the full schema. The key tables are:
+### 4. PostgreSQL Database
+Hosted on the server at `clearfeed.civic.garden` via Unix socket at `/run/postgresql/.s.PGSQL.5999`.
 
-- `app_user` — one row per user (hardcoded UUIDs for now, real auth later)
-- `browse_session` — one row per upload, tracking lifecycle status
-- `twitter_author` — one row per unique Twitter author, updated on each appearance
-- `tweet` — one row per unique tweet, stored once globally
+Key tables:
+- `app_user` — one row per ClearFeed user (extends Django's AbstractBaseUser)
+- `browse_session` — one row per upload, tracks ingestion and analysis lifecycle
+- `twitter_author` — one row per unique Twitter account, upserted on each upload
+- `tweet` — one row per unique tweet, globally deduplicated
 - `tweet_media` — photos and videos attached to tweets
-- `viewed_tweet` — one row every time a user sees a tweet, with engagement stats at that moment
-- `sentiment_result`, `topic_result`, `toxicity_result`, `political_leaning`  — NLP analysis results per tweet
+- `viewed_tweet` — one row per user/session/tweet event, with engagement snapshot
+- `sentiment_result` — sentiment analysis results per tweet (OneToOne with tweet)
+- `topic_result` — topic classification results per tweet (OneToOne with tweet)
+- `llm_analysis_run` — LLM-generated feed blurb per user, one row per run
 
 ---
 
-### 4. NLP Analysis Services
+### 5. NLP Analysis Services
 **Location:** `backend/api/services/`
 
-Three analysis services run synchronously during ingestion:
+Two HuggingFace models run asynchronously via Django-Q after each upload:
 
-- `sentiment.py` — classifies tweet text as positive, negative, or neutral
-- `toxicity.py` — classifies tweet text as toxic, non-toxic, hate etc.
-- `topic.py` — classifies tweet text into topic categories (politics, sports, entertainment etc.)
-- `political_leaning` - not implemented yet because our model is currently specific to U.S. politics, so need to think through this
+- `sentiment.py` — [cardiffnlp/twitter-roberta-base-sentiment-latest](https://huggingface.co/cardiffnlp/twitter-roberta-base-sentiment-latest) — positive / negative / neutral
+- `topic.py` — [cardiffnlp/tweet-topic-21-multi](https://huggingface.co/cardiffnlp/tweet-topic-21-multi) — 21 topic categories
 
-Each service exposes a single function (`analyze_sentiment_text`, `analyze_toxicity_text`, `analyze_topic_text`) that takes tweet text and returns a label and confidence score. Results are written to their respective tables immediately after each tweet is ingested.
+Models are independent — a failure in one does not block the other.
 
 ---
 
-### 5. HTML Frontend
-**Location:** `frontend/` in the main ClearFeed repo
+### 6. LLM Feed Blurb
 
-Plain HTML, CSS, and JavaScript. The frontend will query Django API endpoints and render analysis dashboards showing what the user has been exposed to across their browsing sessions.
+**Location:** `backend/api/services/llm_analysis_runner.py`, `llm_prompting.py`, `llm_sampling.py`
 
----
+After NLP analysis completes, an LLM generates a personalized feed blurb for the user. The LLM is configured via the `LLM_ANALYSIS_MODEL` environment variable.
 
-## The Ingestion Pipeline
+The pipeline:
+1. `llm_sampling.py` — samples a set of the user's tweets
+2. `llm_prompting.py` — builds a prompt combining the sampled tweets with feed-wide stats from `build_feed_summary()` (topics, sentiment, word frequency, promoted percentage)
+3. The model generates a prose reflection — a short, natural-language character blurb describing what the feed suggests about the user
+4. The result is stored in `llm_analysis_run` with status, raw output, structured result, and sample metadata
 
-The core of the backend is the `import_dataset` view in `backend/api/views.py`. It runs in 7 sequential steps every time the extension uploads data:
+The `LLMAnalysisRun` table tracks each run with:
+- `user` — FK to AppUser
+- `status` — QUEUED / PROCESSING / COMPLETE / FAILED
+- `sample_size` and `sample_seed` — reproducibility
+- `model_name` — which model was used
+- `sample_metadata` — tweet IDs sampled and feed summary context used in the prompt
+- `result` — structured JSON output (currently a `reflection` field containing prose)
+- `raw_output` — raw model output for debugging
 
-**Step 1 — App User:** Look up or create the user record. Currently uses a hardcoded UUID; will use real auth tokens later.
-
-**Step 2 — Browse Session:** Create a new session record with status `ingesting`. Every upload = one session.
-
-**Step 3 — Twitter Authors:** For each post, parse the author's profile from `data.core.user_results.result`. If the author already exists in the database, update their mutable fields (followers count, bio, etc.). If they are new, create a full record.
-
-**Step 4 — Tweets:** For each post, insert the tweet if it doesn't already exist (`get_or_create`). Tweets are immutable — if we've seen this tweet before we skip it. Immediately after insertion, NLP analysis runs on the tweet text and results are written to the analysis tables.
-
-**Step 5 — Tweet Media:** Store any photos or videos attached to each tweet, keyed by `media_key`. The same media can appear across multiple tweets but is only stored once.
-
-**Step 6 — Viewed Tweets:** Always insert a new row recording this user seeing this tweet in this session, with engagement stats (likes, retweets, views) captured at the moment of viewing. This is intentionally separate from the tweet itself so we can track how engagement changes over time across sessions.
-
-**Step 7 — Session Complete:** Mark the session status as `complete` and record `ended_at`.
+The blurb is fetched via `/api/feed-summary/` as part of the `llm_analysis` key, which returns the status, reflection text, run ID, model name, and timestamp of the most recent completed run for the user.
 
 ---
 
-## Analysis Queue — Current State and Future Plan
+### 7. Django-Q2 Async Queue
+**Config:** Postgres-backed via `orm: 'default'` — no Redis required.
 
-### Current: Synchronous Analysis
-NLP analysis currently runs synchronously inside the ingestion request. After each tweet is inserted in Step 4, the pipeline immediately calls `analyze_sentiment_text`, `analyze_toxicity_text`, and `analyze_topic_text` on the tweet's `full_text`, then writes results to the database before moving to the next tweet. The session only completes after all tweets in the batch have been analyzed.
+After ingestion completes, `enqueue_session_analysis()` queues an `analyze_session` task using `transaction.on_commit()`. This ensures the task is only queued after all database writes from ingestion have committed — preventing the worker from picking up a task before its tweets exist.
 
-This works for small uploads but has two problems at scale. First, the HTTP request from the extension stays open the entire time analysis is running — if a session has 100 tweets and each takes 500ms to analyze, the extension waits 50 seconds for a response. Second, HuggingFace models are CPU-heavy and running them synchronously blocks the Django worker from handling any other requests.
-
-### Future: Async Queue with Celery (maybe?)
-The `browse_session.status` and `tweet.analysis_status` fields are designed to support an async queue. The planned architecture is:
-
-```
-Extension POSTs NDJSON
-        ↓
-Django ingestion runs Steps 1–7 (no analysis)
-Session status → 'queued'
-        ↓
-Celery(?) task triggered: analyze_session.delay(session_id)
-        ↓
-Celery(?) worker picks up task
-Session status → 'analyzing'
-Tweet analysis_status → 'processing' (per tweet)
-        ↓
-Worker runs HuggingFace models on each pending tweet
-Writes results to sentiment_result, toxicity_result, topic_result, political_leaning (if including)
-Tweet analysis_status → 'complete'
-        ↓
-All tweets done
-Session status → 'complete'
+```python
+Q_CLUSTER = {
+    'name': 'clearfeed',
+    'workers': 1,
+    'timeout': 1200,   # 20 minutes
+    'retry': 1500,     # 25 minutes
+    'orm': 'default',
+}
 ```
 
-The extension gets an immediate `200 OK` response with the `session_id` after ingestion. The frontend can then poll `GET /api/sessions/{session_id}/status/` to check when analysis is done and results are ready to display.
-
-To implement this:
-1. Add Celery and a message broker (Redis or RabbitMQ) to the stack (still need to finalize tools to use here)
-2. Move NLP calls out of `views.py` and into a `tasks.py` Celery task
-3. Change Step 7 to set `session.status = 'queued'` and call `analyze_session.delay(str(session.id))` instead of `'complete'`
-4. Add a status polling endpoint for the frontend
+The `qcluster` worker runs as a persistent systemd user service on the server.
 
 ---
 
-## What's Not Built Yet
+### 8. Frontend
+Plain HTML, CSS, and JavaScript. Pages extend `base.html` and fetch data from Django API endpoints. Charts rendered via Apache ECharts.
 
-- Real user authentication
-- Django API endpoints for the frontend to query
-- HTML frontend dashboards
-- Async analysis queue (Celery?) — analysis currently runs synchronously during ingestion
-- Auto-clear of extension local data after successful upload
-- Political leaning analysis (model not yet integrated)
+Key pages:
+- `/` — home page with user stats and scroll nudge
+- `/feed-summary/` — scrollable multi-section feed analysis dashboard
+- `/onboarding/` — step-by-step setup guide with Firefox detection and extension install link
+- `/landing/` — public landing page for unauthenticated users
+- `/privacy/` — privacy policy
+
 
 # ClearFeed — Dependency Graph
 
 ```mermaid
 flowchart TD
-    EXT[Zeeschuimer Extension] -->|POST /api/import-dataset/| VIEWS[views.py]
-    VIEWS --> MODELS[models.py]
-    VIEWS --> SENT[services/sentiment.py]
-    VIEWS --> TOX[services/toxicity.py]
-    VIEWS --> TOP[services/topic.py]
+    EXT[ClearFeed Capture Extension] -->|POST /api/import-dataset/| VIEWS[views.py]
+    VIEWS --> ING[services/ingestion.py]
+    ING --> MODELS[models.py]
+    ING -->|transaction.on_commit| DQ[(Django-Q Postgres Queue)]
+    DQ --> WORKER[qcluster worker]
+    WORKER --> ANALYSIS[services/analysis.py]
+    ANALYSIS --> SENT[services/sentiment.py]
+    ANALYSIS --> TOP[services/topic.py]
+    WORKER --> LLM[services/llm_analysis_runner.py]
+    LLM --> PROMPT[services/llm_prompting.py]
+    LLM --> SAMPLE[services/llm_sampling.py]
     SENT --> HF[HuggingFace Models]
-    TOX --> HF
     TOP --> HF
-    MODELS --> DB[(PostgreSQL on Railway)]
-    FRONT[HTML Frontend] -->|future API queries| VIEWS
+    PROMPT --> HF
+    MODELS --> DB[(PostgreSQL on Server)]
+    FRONT[HTML Frontend] -->|fetch /api/*| VIEWS
 ```

@@ -1,7 +1,7 @@
 # Model/Resource Documentation
 
-This document describes the main data entities and API resource used by ClearFeed's current backend.
-The system ingests tweet data exported by a browser extension, stores normalized tweet metadata, and runs text analysis models during upload.
+This document describes the main data entities and API resources used by ClearFeed's backend.
+The system ingests tweet data exported by the ClearFeed Capture browser extension, stores normalized tweet metadata, and runs NLP analysis models asynchronously after each upload.
 
 ## Key Concepts
 
@@ -9,7 +9,7 @@ The system ingests tweet data exported by a browser extension, stores normalized
 
 The system separates a tweet's core content from the event of a user seeing that tweet.
 
-- `Tweet` stores the canonical tweet record once.
+- `Tweet` stores the canonical tweet record once, globally deduplicated across all users.
 - `ViewedTweet` stores that a specific user saw that tweet in a specific browsing session.
 
 This is important because the same tweet may appear:
@@ -20,277 +20,244 @@ This is important because the same tweet may appear:
 
 **Session-oriented ingestion**
 
-Every upload from the extension creates a new `BrowseSession`.
-That session groups one batch of collected tweets and links them back to the user who uploaded them.
+Every upload from the extension creates a new BrowseSession. That session groups one batch of collected tweets and links them back to the user who uploaded them. Sessions track the full lifecycle from ingestion through NLP analysis.
 
 **Analysis results are stored separately**
 
-Model outputs are not stored directly on `Tweet`.
-Instead, each analysis type has its own result table, such as `SentimentResult`, `TopicResult`, and `ToxicityResult`.
-This keeps the tweet record focused on source data, while result tables store derived data.
+Model outputs are not stored directly on Tweet. Instead, each analysis type has its own result table (SentimentResult, TopicResult). This keeps the tweet record focused on source data while result tables store derived data. The LLM feed blurb is stored in LLMAnalysisRun, separate from per-tweet results.
 
 **Raw source data is partially preserved**
 
-`ViewedTweet.raw_data` stores the original JSON record from the extension.
-This is useful if the team later realizes a field was missed during parsing and needs to reprocess old uploads.
+ViewedTweet.raw_data stores the original JSON record from the extension. This is useful if the team later realizes a field was missed during parsing and needs to reprocess old uploads without requiring the user to re-upload.
 
-## Resource
+**Analysis runs asynchronously**
+NLP analysis does not run during the upload request. After ingestion completes, a Django-Q task is queued via transaction.on_commit() and picked up by the qcluster worker. The extension gets an immediate response; analysis happens in the background.
 
-### `POST /api/import-dataset/`
-
-This resource accepts NDJSON from the browser extension and performs the current ingestion pipeline.
-
-It:
-
-- reads the uploaded NDJSON lines
-- creates or finds the current `AppUser`
-- creates a new `BrowseSession`
-- upserts `TwitterAuthor`
-- creates or reuses `Tweet`
-- runs text analysis models on `Tweet.full_text`
-- stores result rows
-- creates `ViewedTweet`
-- creates `TweetMedia`
-
-Important note:
-This endpoint currently performs both ingestion and model inference in one request, so uploads may take longer as more models are added.
 
 ## Entities
 
 ### `AppUser`
 
-This represents one application user.
-Right now the code uses a hardcoded test user, but the table is designed to support real authentication later.
+Represents one ClearFeed application user. Extends Django's `AbstractBaseUser` — authentication is via email and password, sessions managed by Django's built-in session framework.
 
 | Name | Type | Description |
 | --- | --- | --- |
-| `id` | `UUID` | Primary key. Unique identifier for one app user. |
+| `id` | `UUID` | Primary key. |
+| `email` | `EmailField, unique, nullable` | User's email address, used as the login identifier. |
+| `is_staff` | `Boolean` | Whether the user has Django admin access. |
+| `is_active` | `Boolean` | Whether the account is active. |
 | `created_at` | `DateTime` | Time the user record was created. |
 
 Relationships and constraints:
-
 - primary key is a UUID
+- `email` is unique
 - one `AppUser` can have many `BrowseSession`
 - one `AppUser` can have many `ViewedTweet`
+- one `AppUser` can have many `LLMAnalysisRun`
+
+---
 
 ### `BrowseSession`
 
-This represents one upload or browsing session from the browser extension.
-It groups a batch of tweets collected during one user activity period.
+Represents one upload from the browser extension. Groups a batch of tweets collected during one user activity period and tracks the full ingestion and analysis lifecycle.
 
 | Name | Type | Description |
 | --- | --- | --- |
-| `id` | `UUID` | Primary key. Unique identifier for one browsing session. |
+| `id` | `UUID` | Primary key. |
 | `user` | `ForeignKey(AppUser)` | The user who owns this session. |
-| `platform` | `Text` | Source platform, such as `twitter.com` or `x.com`. |
+| `platform` | `Text` | Source platform identifier from the `X-Zeeschuimer-Platform` header. |
 | `user_agent` | `Text, nullable` | Browser user agent string from the upload request. |
-| `status` | `Text` | Session lifecycle status: `ingesting`, `queued`, `analyzing`, `complete`, `failed`. |
-| `started_at` | `DateTime` | Time the session record was created. |
-| `ended_at` | `DateTime, nullable` | Time ingestion or processing finished. |
+| `status` | `Text` | Session lifecycle status: `queued`, `analyzing`, `complete`, `failed`. |
+| `created_at` | `DateTime` | Time the session was created. |
+| `updated_at` | `DateTime` | Automatically updated on every save. |
 
 Relationships and constraints:
-
 - belongs to exactly one `AppUser`
 - one `BrowseSession` can have many `ViewedTweet`
 - indexed by `user`
 
-Important note:
-The system is session-based, not only user-based.
-This matters because one user may upload multiple datasets over time, and each upload should remain separate.
+Important note: The system is session-based, not only user-based. One user may upload many times over time, and each upload remains a separate session.
+
+---
 
 ### `TwitterAuthor`
 
-This stores normalized metadata about the author of a tweet.
-The same author may be referenced by many tweets.
+Stores normalized metadata about the author of a tweet. The same author may be referenced by many tweets across many sessions and users. Authors are upserted on every upload — mutable fields are updated, immutable fields are never overwritten.
 
 | Name | Type | Description |
 | --- | --- | --- |
-| `author_twitter_id` | `Text` | Primary key. Twitter/X author identifier from the source data. |
-| `screen_name` | `Char(50), nullable` | Author handle, such as `@example` without the `@`. |
-| `display_name` | `Char(100), nullable` | Public profile display name. |
-| `bio` | `Text, nullable` | Author biography text. |
-| `location` | `Text, nullable` | Profile location text. |
-| `followers_count` | `Integer, nullable` | Number of followers at the time this metadata was seen. |
-| `following_count` | `Integer, nullable` | Number of followed accounts. |
-| `statuses_count` | `Integer, nullable` | Number of tweets/posts made by the account. |
-| `is_blue_verified` | `Boolean, nullable` | Whether the account is marked as blue verified. |
-| `account_created_at` | `DateTime, nullable` | Account creation time parsed from source data. |
-| `last_updated_at` | `DateTime` | Timestamp automatically updated when the row is updated. |
+| `author_twitter_id` | `Text` | Primary key. Twitter's internal author ID. |
+| `screen_name` | `Char(50), nullable` | Author handle without the `@`. Mutable. |
+| `display_name` | `Char(100), nullable` | Public profile display name. Mutable. |
+| `bio` | `Text, nullable` | Author biography text. Mutable. |
+| `location` | `Text, nullable` | Profile location text. Mutable. |
+| `followers_count` | `Integer, nullable` | Follower count at time of last upsert. Mutable. |
+| `following_count` | `Integer, nullable` | Following count at time of last upsert. Mutable. |
+| `statuses_count` | `Integer, nullable` | Total tweet count at time of last upsert. Mutable. |
+| `is_blue_verified` | `Boolean, nullable` | Whether the account has blue verification. Mutable. |
+| `account_created_at` | `DateTime, nullable` | When the Twitter account was created. **Immutable** — set on first insert only, never updated. |
+| `created_at` | `DateTime` | When this row was first inserted. |
+| `updated_at` | `DateTime` | Automatically updated on every save. |
 
 Relationships and constraints:
-
-- primary key is the source platform's author id
+- primary key is Twitter's author ID string
 - one `TwitterAuthor` can have many `Tweet`
 - `screen_name` is indexed
 
-Important note:
-This table is updated over time because author metadata can change.
-For example, follower count and bio are mutable, while the author id remains stable.
+Important note: `account_created_at` is the only truly immutable field — it represents when the Twitter account was created, which never changes. All other fields are updated on each upsert to reflect the latest profile state. Null filtering prevents overwriting good data with incomplete API responses.
+
+---
 
 ### `Tweet`
 
-This stores the canonical metadata and text for one tweet.
-A tweet is stored once globally, even if it appears in many sessions.
+Stores the canonical metadata and text for one tweet. A tweet is stored once globally — if the same tweet is seen by multiple users or in multiple sessions, it is only inserted once. Tweets are immutable after first insert.
 
 | Name | Type | Description |
 | --- | --- | --- |
-| `tweet_id` | `Text` | Primary key. Source tweet identifier. |
+| `tweet_id` | `Text` | Primary key. Twitter's tweet ID string. |
 | `author` | `ForeignKey(TwitterAuthor), nullable` | The tweet's author. |
-| `conversation_id` | `Text, nullable` | Conversation/thread identifier from the source platform. |
+| `conversation_id` | `Text, nullable` | Thread identifier. |
 | `is_reply` | `Boolean` | Whether the tweet is a reply. |
-| `in_reply_to_tweet_id` | `Text, nullable` | Source tweet id being replied to. |
+| `in_reply_to_tweet_id` | `Text, nullable` | ID of the tweet being replied to. |
 | `in_reply_to_screen_name` | `Text, nullable` | Screen name of the account being replied to. |
-| `timestamp_collected` | `BigInteger, nullable` | Collection timestamp from the outer extension payload. |
-| `full_text` | `Text, nullable` | Main tweet text used for NLP analysis. |
+| `timestamp_collected` | `BigInteger, nullable` | Collection timestamp from the extension payload. |
+| `full_text` | `Text, nullable` | Tweet text, used for NLP analysis. |
 | `hashtags` | `JSON, nullable` | List of hashtag strings extracted from the tweet. |
-| `lang` | `Char(10), nullable` | Language code from source metadata. |
-| `source_app` | `Text, nullable` | Client application source string. |
-| `source_platform_url` | `Text, nullable` | Source platform URL captured by the extension. |
+| `lang` | `Char(10), nullable` | Language code. |
+| `source_app` | `Text, nullable` | Client application used to post (e.g. "Twitter for iPhone"). |
+| `source_platform_url` | `Text, nullable` | URL where the extension captured the tweet. |
 | `is_quote_status` | `Boolean` | Whether the tweet quotes another tweet. |
 | `is_retweet` | `Boolean` | Whether the tweet is a retweet. |
-| `possibly_sensitive` | `Boolean` | Whether the platform flagged the tweet as sensitive. |
-| `promoted` | `Boolean` | Whether the tweet appears to be promoted content. |
-| `tweet_created_at` | `DateTime, nullable` | Original tweet creation time. |
-| `analysis_status` | `Text` | NLP progress status: `pending`, `processing`, `complete`, `failed`. |
+| `possibly_sensitive` | `Boolean` | Whether Twitter flagged the content as sensitive. |
+| `promoted` | `Boolean` | Whether the tweet was served as a paid ad. Detected from `promotedMetadata` in the Twitter API response. |
+| `tweet_created_at` | `DateTime, nullable` | When the tweet was originally posted. |
+| `analysis_status` | `Text` | NLP pipeline status: `pending`, `processing`, `complete`, `failed`. |
+| `created_at` | `DateTime` | When this row was first inserted. |
+| `updated_at` | `DateTime` | Automatically updated on every save. |
 
 Relationships and constraints:
-
-- primary key is the source tweet id
+- primary key is Twitter's tweet ID string
 - belongs to zero or one `TwitterAuthor`
 - one `Tweet` can have many `TweetMedia`
 - one `Tweet` can have many `ViewedTweet`
-- one `Tweet` can have many result rows across analysis tables
-- indexed by `author`, `conversation_id`, `tweet_created_at`, and `analysis_status`
+- has one `SentimentResult` and one `TopicResult`
+- indexed by `author`, `conversation_id`, `tweet_created_at`, `analysis_status`
 
-Important note:
-This table stores tweet content once, while `ViewedTweet` stores each viewing event separately.
-That split avoids duplicating tweet text for every session.
+Important note: `promoted` is one of ClearFeed's most important fields — it identifies tweets served as paid ads, powering the promoted content analysis in the dashboard.
+
+---
 
 ### `TweetMedia`
 
-This stores media objects attached to a tweet, such as photos or videos.
+Stores media attachments (photos, videos, GIFs) for a tweet.
 
 | Name | Type | Description |
 | --- | --- | --- |
-| `id` | `UUID` | Primary key for this media record. |
+| `id` | `UUID` | Primary key. |
 | `tweet` | `ForeignKey(Tweet)` | The tweet this media belongs to. |
-| `media_key` | `Text` | Unique media identifier from the source data. |
-| `type` | `Text, nullable` | Media type such as `photo`, `video`, or `animated_gif`. |
-| `media_url` | `Text, nullable` | URL to the media asset or thumbnail. |
-| `width` | `Integer, nullable` | Media width in pixels. |
-| `height` | `Integer, nullable` | Media height in pixels. |
-| `duration_ms` | `Integer, nullable` | Duration for video media; usually null for photos. |
-| `video_variants` | `JSON, nullable` | Variant list for video media. |
-| `created_at` | `DateTime` | Time this media row was created. |
+| `media_key` | `Text, unique` | Twitter's unique media identifier. |
+| `type` | `Text, nullable` | Media type: `photo`, `video`, or `animated_gif`. |
+| `media_url` | `Text, nullable` | CDN URL to the media asset. |
+| `width` | `Integer, nullable` | Width in pixels. |
+| `height` | `Integer, nullable` | Height in pixels. |
+| `duration_ms` | `Integer, nullable` | Duration for video media; null for photos. |
+| `video_variants` | `JSON, nullable` | Available quality variants for video. |
+| `created_at` | `DateTime` | When this row was created. |
 
 Relationships and constraints:
-
 - belongs to exactly one `Tweet`
-- `media_key` is unique
+- `media_key` is unique — the same media shared across tweets is stored once
 - indexed by `tweet`
 
-Important note:
-Media is stored separately because one tweet may have multiple media attachments.
+Important note: Uses `extended_entities` rather than `entities` from the Twitter API — `extended_entities` contains full video variant information; `entities` only has the thumbnail.
+
+---
 
 ### `ViewedTweet`
 
-This represents a specific user seeing a specific tweet during a specific browsing session.
-It is the event table that connects users, sessions, and canonical tweets.
+Records a specific user seeing a specific tweet during a specific browsing session. This is the event table — a new row is always inserted, even if the tweet already exists from a previous session. The same tweet can have many `ViewedTweet` rows across different users and sessions.
 
 | Name | Type | Description |
 | --- | --- | --- |
-| `id` | `UUID` | Primary key for this viewing event. |
+| `id` | `UUID` | Primary key. |
 | `user` | `ForeignKey(AppUser)` | User who saw the tweet. |
 | `session` | `ForeignKey(BrowseSession)` | Session in which the tweet was seen. |
-| `tweet` | `ForeignKey(Tweet)` | Canonical tweet that was viewed. |
+| `tweet` | `ForeignKey(Tweet)` | The canonical tweet that was viewed. |
 | `timestamp_collected` | `BigInteger, nullable` | Collection time from the extension payload. |
-| `favorite_count` | `Integer, nullable` | Like count at the moment the tweet was seen. |
-| `retweet_count` | `Integer, nullable` | Retweet count at the moment the tweet was seen. |
-| `reply_count` | `Integer, nullable` | Reply count at the moment the tweet was seen. |
-| `quote_count` | `Integer, nullable` | Quote count at the moment the tweet was seen. |
-| `bookmark_count` | `Integer, nullable` | Bookmark count at the moment the tweet was seen. |
-| `view_count` | `BigInteger, nullable` | View count at the moment the tweet was seen. |
-| `raw_data` | `JSON, nullable` | Original full source record for this viewed tweet. |
+| `favorite_count` | `Integer, nullable` | Like count at the moment of viewing. |
+| `retweet_count` | `Integer, nullable` | Retweet count at the moment of viewing. |
+| `reply_count` | `Integer, nullable` | Reply count at the moment of viewing. |
+| `quote_count` | `Integer, nullable` | Quote count at the moment of viewing. |
+| `bookmark_count` | `Integer, nullable` | Bookmark count at the moment of viewing. |
+| `view_count` | `BigInteger, nullable` | View count at the moment of viewing. |
+| `raw_data` | `JSON, nullable` | Full original JSON record from the extension, stored as a backup for re-parsing. |
+| `created_at` | `DateTime` | When this row was created. |
 
 Relationships and constraints:
-
 - belongs to exactly one `AppUser`
 - belongs to exactly one `BrowseSession`
 - belongs to exactly one `Tweet`
-- indexed by `user`, `session`, and `tweet`
+- indexed by `user`, `session`, `tweet`
 
-Important note:
-This table stores time-sensitive engagement counts as a snapshot.
-Those values can change over time, so they should not overwrite the canonical `Tweet` row.
+Important note: Engagement counts are captured as a snapshot at the moment of viewing — not at the time the tweet was posted. These values change over time and must not overwrite the canonical `Tweet` row.
+
+---
 
 ### `SentimentResult`
 
-This stores sentiment analysis output for one tweet.
+Stores sentiment analysis output for one tweet. One result per tweet (`OneToOneField`).
 
 | Name | Type | Description |
 | --- | --- | --- |
-| `id` | `UUID` | Primary key for this sentiment result. |
-| `tweet` | `ForeignKey(Tweet)` | Tweet that was analyzed. |
-| `sentiment` | `Text` | Predicted sentiment label, currently expected to be `positive`, `neutral`, or `negative`. |
+| `tweet` | `OneToOneField(Tweet)` | The analyzed tweet. Primary key relationship. |
+| `sentiment` | `Text` | Predicted label: `positive`, `neutral`, or `negative`. |
 | `confidence` | `Float, nullable` | Confidence score for the predicted label. |
-| `analyzed_at` | `DateTime` | Time this result row was created. |
+| `created_at` | `DateTime` | When this result was created. |
+| `updated_at` | `DateTime` | Automatically updated on every save. |
 
-Relationships and constraints:
+Model: [cardiffnlp/twitter-roberta-base-sentiment-latest](https://huggingface.co/cardiffnlp/twitter-roberta-base-sentiment-latest)
 
-- belongs to exactly one `Tweet`
-- indexed by `tweet`
+---
 
 ### `TopicResult`
 
-This stores topic-classification output for one tweet.
+Stores topic classification output for one tweet. One result per tweet (`OneToOneField`).
 
 | Name | Type | Description |
 | --- | --- | --- |
-| `id` | `UUID` | Primary key for this topic result. |
-| `tweet` | `ForeignKey(Tweet)` | Tweet that was analyzed. |
-| `topic` | `Text` | Predicted topic label from the topic classifier. |
+| `tweet` | `OneToOneField(Tweet)` | The analyzed tweet. Primary key relationship. |
+| `topic` | `Text` | Predicted topic label from a fixed set of 21 categories. |
 | `confidence` | `Float, nullable` | Confidence score for the predicted topic. |
-| `analyzed_at` | `DateTime` | Time this result row was created. |
+| `created_at` | `DateTime` | When this result was created. |
+| `updated_at` | `DateTime` | Automatically updated on every save. |
 
-Relationships and constraints:
+Model: [cardiffnlp/tweet-topic-21-multi](https://huggingface.co/cardiffnlp/tweet-topic-21-multi)
 
-- belongs to exactly one `Tweet`
-- indexed by `tweet`
+Important note: The topic model returns one top label from a fixed category set — not freeform keywords.
 
-Important note:
-The topic model returns one top label from a fixed category set, not freeform keywords.
+---
 
-### `PoliticalLeaningResult`
+### `LLMAnalysisRun`
 
-This stores political-leaning analysis output for one tweet.
-The model integration is planned in the schema even if the current pipeline may not yet populate it.
+Stores the result of one LLM feed blurb generation run for a user. One run is created per analysis invocation and tracks the full lifecycle from queuing through completion. The most recent completed run's reflection is surfaced in the `/api/feed-summary/` response.
 
 | Name | Type | Description |
 | --- | --- | --- |
-| `id` | `UUID` | Primary key for this result. |
-| `tweet` | `ForeignKey(Tweet)` | Tweet that was analyzed. |
-| `leaning` | `Text` | Predicted political leaning label, such as `left`, `right`, `centrist`, or `unclear`. |
-| `confidence` | `Float, nullable` | Confidence score for the predicted leaning. |
-| `analyzed_at` | `DateTime` | Time this result row was created. |
+| `id` | `UUID` | Primary key. |
+| `user` | `ForeignKey(AppUser)` | The user this run belongs to. |
+| `status` | `Text` | Run lifecycle status: `queued`, `processing`, `complete`, `failed`. |
+| `sample_size` | `Integer` | Number of tweets sampled for the prompt. |
+| `sample_seed` | `BigInteger, nullable` | Random seed used for sampling, for reproducibility. |
+| `model_name` | `Text` | Name of the model used (configured via `LLM_ANALYSIS_MODEL` env var). |
+| `sample_metadata` | `JSON, nullable` | Metadata about the sample: tweet IDs and feed summary context used in the prompt. |
+| `result` | `JSON, nullable` | Structured output from the model. Currently contains a `reflection` field with prose text. |
+| `raw_output` | `Text, nullable` | Raw model output, stored for debugging. |
+| `error_message` | `Text, nullable` | Error message if the run failed. |
+| `created_at` | `DateTime` | When this run was created. |
+| `updated_at` | `DateTime` | Automatically updated on every save. |
 
 Relationships and constraints:
+- belongs to exactly one `AppUser`
+- indexed by `user`, `status`, `created_at`
 
-- belongs to exactly one `Tweet`
-- indexed by `tweet`
-
-### `ToxicityResult`
-
-This stores toxicity-classification output for one tweet.
-
-| Name | Type | Description |
-| --- | --- | --- |
-| `id` | `UUID` | Primary key for this toxicity result. |
-| `tweet` | `ForeignKey(Tweet)` | Tweet that was analyzed. |
-| `toxicity_label` | `Text` | Predicted toxicity label, currently expected to be something like `neutral` or `toxic`. |
-| `confidence` | `Float, nullable` | Confidence score for the predicted label. |
-| `analyzed_at` | `DateTime` | Time this result row was created. |
-
-Relationships and constraints:
-
-- belongs to exactly one `Tweet`
-- indexed by `tweet`
+Important note: The LLM prompt is built from a sample of the user's tweets combined with feed-wide stats (topics, sentiment, word frequency, promoted percentage) from `build_feed_summary()`. This gives the model context about both individual tweets and overall feed patterns when generating the reflection.
