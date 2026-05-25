@@ -25,10 +25,9 @@
       <div class="intro-card">
         <h1>What topics are presented to you the most?</h1>
         <p>
-          Now let's start breaking down what you're seeing. First, what topics come up the most on your feed? We used
-          a model trained on X data that broke down content into Z many categories. Here's what your top five topics were,
-          and how much they made up your feed.
-        </p>
+          Now let's start breaking down what you're seeing. We analyzed your feed using the <strong><a href="https://huggingface.co/cardiffnlp/tweet-topic-21-multi">tweet-topic-21-multi</a></strong> model, which classifies tweets into 21 distinct topics.
+          Your feed contained tweets across multiple topics, which we normalized and ranked by frequency. The bar chart above shows your top 5 most common topics as a percentage of your total feed. This helps reveal what subjects dominate your social media experience.
+  </p>
       </div>
     </div>
   </section>
@@ -111,8 +110,9 @@
       <div class="intro-card">
         <h1>How do your tweets feel?</h1>
         <p>
-          Weird question, we know. But has your feed ever left you feeling in despair? Or maybe overjoyed at something funny? We used
-          the RoBERTa model, which was trained on 124 million tweets, to analyze the sentiment of the posts on your feed.
+        We used the <strong><a href="https://huggingface.co/cardiffnlp/twitter-roberta-base-sentiment-latest">roBERTa</a></strong> model, trained on 124 million tweets, to analyze the sentiment of each post in your feed.
+        The model classifies each tweet as Negative, Neutral, or Positive. Your overall sentiment score ranges from -1 (most negative) to +1 (most positive),
+        calculated by averaging all tweet sentiments. This score reveals the emotional tone of content you're exposed to.
         </p>
       </div>
     </div>
