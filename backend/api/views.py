@@ -484,6 +484,30 @@ def api_home_summary(request):
         }
     )
 
+def contact(request):
+    if request.method == 'POST':
+        form = ContactForm(request.POST)
+        if form.is_valid():
+            name = form.cleaned_data['name']
+            email = form.cleaned_data['email']
+            message = form.cleaned_data['message']
+            
+            try:
+                send_mail(
+                    subject=f'ClearFeed Contact Form: {name}',
+                    message=f'From: {email}\n\n{message}',
+                    from_email=settings.DEFAULT_FROM_EMAIL,
+                    recipient_list=['khushi@uchicago.edu'],
+                    fail_silently=False,
+                )
+                return render(request, 'contact.html', {'success': True})
+            except Exception as e:
+                return render(request, 'contact.html', {'error': str(e)})
+    else:
+        form = ContactForm()
+    
+    return render(request, 'contact.html', {'form': form})
+
 
 def feed_summary(request):
     """

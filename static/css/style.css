@@ -1222,3 +1222,154 @@ a.nav-link:hover {
         font-size: 11px;
     }
 }
+
+/* Contact Page */
+.contact-wrapper {
+  max-width: 1000px;
+  margin: 0 auto;
+  padding: 50px 20px 80px;
+}
+
+.contact-hero {
+  text-align: center;
+  margin-bottom: 50px;
+}
+
+.contact-hero h1 {
+  font-size: 44px;
+  margin-bottom: 16px;
+}
+
+.contact-hero p {
+  font-size: 18px;
+  color: var(--cf-muted);
+  max-width: 700px;
+  margin-left: auto;
+  margin-right: auto;
+}
+
+.contact-container {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 40px;
+  margin-top: 40px;
+}
+
+.contact-card {
+  background: white;
+  border: 2px solid var(--cf-border);
+  border-radius: 12px;
+  padding: 32px;
+  box-shadow: 0 4px 0 rgba(33, 56, 71, 0.08);
+}
+
+.contact-card h2 {
+  margin-bottom: 24px;
+}
+
+.form-group {
+  margin-bottom: 20px;
+}
+
+.form-group label {
+  display: block;
+  margin-bottom: 8px;
+  font-weight: 600;
+  color: var(--cf-dark);
+}
+
+.form-group input,
+.form-group textarea {
+  width: 100%;
+  padding: 12px 14px;
+  border: 2px solid var(--cf-border);
+  border-radius: 6px;
+  font-family: Helvetica, Arial, sans-serif;
+  font-size: 16px;
+  color: var(--cf-dark);
+  box-sizing: border-box;
+}
+
+.form-group input:focus,
+.form-group textarea:focus {
+  outline: none;
+  border-color: var(--cf-blue);
+  box-shadow: 0 0 0 3px rgba(0, 158, 237, 0.1);
+}
+
+.form-group textarea {
+  resize: vertical;
+  min-height: 120px;
+}
+
+.contact-info {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+.info-box {
+  background: white;
+  border: 2px solid var(--cf-border);
+  border-radius: 12px;
+  padding: 24px;
+  box-shadow: 0 4px 0 rgba(33, 56, 71, 0.08);
+}
+
+.info-box h3 {
+  color: var(--cf-blue);
+  margin-bottom: 16px;
+  font-size: 18px;
+}
+
+.info-box p {
+  margin-bottom: 12px;
+  font-size: 15px;
+  line-height: 1.6;
+  color: var(--cf-dark);
+}
+
+.info-box p:last-child {
+  margin-bottom: 0;
+}
+
+.info-box a {
+  color: var(--cf-blue);
+  text-decoration: none;
+  font-weight: 600;
+}
+
+.info-box a:hover {
+  text-decoration: underline;
+}
+
+@media (max-width: 768px) {
+  .contact-hero h1 {
+    font-size: 32px;
+  }
+
+  .contact-container {
+    grid-template-columns: 1fr;
+    gap: 24px;
+  }
+
+  .contact-card,
+  .info-box {
+    padding: 20px;
+  }
+}
+
+@media (max-width: 480px) {
+  .contact-hero h1 {
+    font-size: 28px;
+  }
+
+  .contact-card {
+    padding: 16px;
+  }
+
+  .form-group input,
+  .form-group textarea {
+    font-size: 16px;
+  }
+}

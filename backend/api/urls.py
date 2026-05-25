@@ -23,6 +23,7 @@ urlpatterns = [
     path("privacy/", views.privacy, name="privacy"),
     path("analysis/", views.full_analysis, name="full_analysis"),
     path("landing/", views.landing, name="landing"),
+    path("contact/", views.contact, name="contact"),
 ]
 
 # if the URL is import-dataset/ run the import_dataset function from views.py.

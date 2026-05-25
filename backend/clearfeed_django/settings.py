@@ -273,3 +273,7 @@ LOGOUT_REDIRECT_URL = "/"
 LOGIN_URL = "/login/"  # where @login_required redirects
 
 CRISPY_TEMPLATE_PACK = "bootstrap3"  # crispy forms configuration
+
+# email config
+EMAIL_BACKEND = 'django.core.mail.backends.console.EmailBackend'
+DEFAULT_FROM_EMAIL = 'noreply@clearfeed.civic.garden'

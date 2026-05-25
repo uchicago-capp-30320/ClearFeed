@@ -1,0 +1,94 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block title %}Contact Us{% endblock %}
+
+{% block content %}
+
+<div class="contact-wrapper">
+  <div class="contact-hero">
+    <h1>Get in Touch</h1>
+    <p>Have questions or feedback? We'd love to hear from you. Send us a message and we'll get back to you as soon as possible.</p>
+  </div>
+
+  {% if success %}
+  <div class="banner banner-success">
+    <strong>Success!</strong> Your message has been sent. We'll be in touch soon.
+  </div>
+  {% endif %}
+
+  {% if error %}
+  <div class="banner banner-warning">
+    <strong>Error:</strong> {{ error }}
+  </div>
+  {% endif %}
+
+  <div class="contact-container">
+    <div class="contact-card">
+      <form method="post">
+        {% csrf_token %}
+        
+        <div class="form-group">
+          <label for="{{ form.name.id_for_label }}">Name</label>
+          {{ form.name }}
+          {% if form.name.errors %}
+            <div class="errorlist">
+              {% for error in form.name.errors %}
+                <li>{{ error }}</li>
+              {% endfor %}
+            </div>
+          {% endif %}
+        </div>
+
+        <div class="form-group">
+          <label for="{{ form.email.id_for_label }}">Email</label>
+          {{ form.email }}
+          {% if form.email.errors %}
+            <div class="errorlist">
+              {% for error in form.email.errors %}
+                <li>{{ error }}</li>
+              {% endfor %}
+            </div>
+          {% endif %}
+        </div>
+
+        <div class="form-group">
+          <label for="{{ form.message.id_for_label }}">Message</label>
+          {{ form.message }}
+          {% if form.message.errors %}
+            <div class="errorlist">
+              {% for error in form.message.errors %}
+                <li>{{ error }}</li>
+              {% endfor %}
+            </div>
+          {% endif %}
+        </div>
+
+        <button type="submit" class="primary-button button-full-width">Send Message</button>
+      </form>
+    </div>
+
+    <div class="contact-info">
+      <div class="info-box">
+        <h3>Contact Information</h3>
+        <p>
+          <strong>Email:</strong><br>
+          <a href="mailto:khushi@uchicago.edu">khushi@uchicago.edu</a>
+        </p>
+        <p>
+          <strong>Response Time:</strong><br>
+          We typically respond within 24-48 hours.
+        </p>
+      </div>
+
+      <div class="info-box">
+        <h3>About ClearFeed</h3>
+        <p>
+          ClearFeed helps you understand your social media feed by analyzing the content, topics, and sentiment you're exposed to. Our mission is to make the invisible visible.
+        </p>
+      </div>
+    </div>
+  </div>
+</div>
+
+{% endblock %}
