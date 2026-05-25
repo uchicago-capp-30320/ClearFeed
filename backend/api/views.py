@@ -1,7 +1,7 @@
 from collections import Counter
 import re
 
-from api.forms import AppUserCreationForm
+from api.forms import AppUserCreationForm, ContactForm
 from api.models import LLMAnalysisRun
 from api.services.llm_analysis_runner import run_user_llm_analysis
 from api.services.ingestion import ingest_posts
@@ -13,6 +13,7 @@ from django.http import JsonResponse
 from django.shortcuts import redirect, render
 from django.views.decorators.csrf import csrf_exempt
 from django.utils import timezone
+
 
 from .models import (
     AnalysisStatus,
