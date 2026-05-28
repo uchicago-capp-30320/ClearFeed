@@ -1,0 +1,97 @@
+from django.core.management.base import BaseCommand
+from api.models import Tweet, BrowseSession, ViewedTweet, AnalysisStatus, SessionStatus
+from api.services.analysis import analyze_tweet
+from api.services.llm_analysis_runner import run_user_llm_analysis
+
+
+class Command(BaseCommand):
+    help = "Run analysis on all tweets with status pending or failed"
+
+    def handle(self, *args, **options):
+        # ----------------------------------------------------------------------
+        # Step 1 — find tweets that need analysis
+        # ----------------------------------------------------------------------
+
+        tweets = list(
+            Tweet.objects.filter(
+                analysis_status__in=[
+                    AnalysisStatus.PENDING,
+                    AnalysisStatus.FAILED,
+                ],
+                full_text__isnull=False,
+            )
+        )
+
+        total = len(tweets)
+        self.stdout.write(f"Found {total} tweets to analyze")
+
+        if total == 0:
+            self.stdout.write(self.style.SUCCESS("Nothing to do"))
+            return
+
+        # ----------------------------------------------------------------------
+        # Step 2 — mark affected sessions as analyzing
+        # ----------------------------------------------------------------------
+
+        session_ids = list(
+            ViewedTweet.objects.filter(tweet__in=tweets)
+            .values_list("session_id", flat=True)
+            .distinct()
+        )
+
+        BrowseSession.objects.filter(id__in=session_ids).update(
+            status=SessionStatus.ANALYZING
+        )
+
+        # ----------------------------------------------------------------------
+        # Step 3 — run NLP analysis on each tweet
+        # ----------------------------------------------------------------------
+
+        for i, tweet in enumerate(tweets, 1):
+            self.stdout.write(f"[{i}/{total}] Analyzing tweet {tweet.tweet_id}...")
+            analyze_tweet(tweet)
+            status = Tweet.objects.get(tweet_id=tweet.tweet_id).analysis_status
+            self.stdout.write(f"  → {status}")
+
+        # ----------------------------------------------------------------------
+        # Step 4 — update session statuses and run LLM analysis
+        # ----------------------------------------------------------------------
+
+        for session_id in session_ids:
+            session = BrowseSession.objects.get(id=session_id)
+
+            tweet_ids = list(
+                ViewedTweet.objects.filter(session=session)
+                .values_list("tweet_id", flat=True)
+                .distinct()
+            )
+            unfinished = Tweet.objects.filter(
+                tweet_id__in=tweet_ids,
+                analysis_status__in=[
+                    AnalysisStatus.PENDING,
+                    AnalysisStatus.PROCESSING,
+                    AnalysisStatus.FAILED,
+                ],
+            ).count()
+
+            if unfinished == 0:
+                session.status = SessionStatus.COMPLETE
+                session.save()
+                self.stdout.write(f"Session {session_id} → complete")
+                try:
+                    run_user_llm_analysis(session.user, sample_size=10, seed=None)
+                    self.stdout.write(f"Session {session_id} → llm analysis complete")
+                except Exception as exc:
+                    self.stdout.write(
+                        self.style.WARNING(
+                            f"Session {session_id} → llm analysis failed: {exc}"
+                        )
+                    )
+            else:
+                self.stdout.write(
+                    f"Session {session_id} → {unfinished} tweets still unfinished"
+                )
+                session.status = SessionStatus.FAILED
+                session.save()
+
+        self.stdout.write(self.style.SUCCESS("Done"))

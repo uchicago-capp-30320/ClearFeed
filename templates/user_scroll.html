@@ -1,0 +1,596 @@
+{% extends "base.html" %}
+
+{% block title %}Your Feed Report{% endblock %}
+
+{% block content %}
+
+<div class="deck" id="deck">
+
+    <!-- PAGE 0: Intro -->
+  <section class="page page-intro" id="page-intro">
+    <div class="page-content">
+      <div class="intro-card">
+        <h1>Let's see what you see.</h1>
+        <p>
+          We analyzed your upload tweets to understand what exactly shows up among the endless scroll.
+        </p>
+      </div>
+    </div>
+  </section>
+
+  <!-- PAGE 1: Topics -->
+
+  <section class="page page-intro" id="page-intro">
+    <div class="page-content">
+      <div class="intro-card">
+        <h1>What topics are presented to you the most?</h1>
+        <p>
+          Now let's start breaking down what you're seeing. We analyzed your feed using the <strong><a href="https://huggingface.co/cardiffnlp/tweet-topic-21-multi">tweet-topic-21-multi</a></strong> model, which classifies tweets into 21 distinct topics.
+          Your feed contained tweets across multiple topics, which we normalized and ranked by frequency. The bar chart above shows your top 5 most common topics as a percentage of your total feed. This helps reveal what subjects dominate your social media experience.
+  </p>
+      </div>
+    </div>
+  </section>
+
+  <section class="page page-topics" id="page-topics">
+    <div class="page-content">
+      <h1>Your Top 5 Most Frequent Topics</h1>
+      <div class="chart-card">
+        <div id="barChart"></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- PAGE 2: Promoted -->
+
+    <section class="page page-intro" id="page-intro">
+    <div class="page-content">
+      <div class="intro-card">
+        <h1>
+          Now, who is paying to get their content on your feed?
+        </h1>
+      </div>
+    </div>
+  </section>
+
+
+  <section class="page page-promoted" id="page-promoted">
+    <div class="page-content">
+      <div class="promoted-container">
+        <div class="dollar-container">
+          <svg class="dollar-svg" id="dollarSvg" viewBox="0 0 400 500" xmlns="http://www.w3.org/2000/svg">
+            <defs>
+              <clipPath id="dollarClip">
+                <text x="200" y="450"
+                      font-family="Arial Black, Arial, sans-serif"
+                      font-size="500" font-weight="900"
+                      text-anchor="middle">$</text>
+              </clipPath>
+            </defs>
+            <text x="200" y="450"
+                  font-family="Arial Black, Arial, sans-serif"
+                  font-size="500" font-weight="900"
+                  text-anchor="middle"
+                  fill="none" stroke="#009eed" stroke-width="14"
+                  stroke-linejoin="round">$</text>
+            <g clip-path="url(#dollarClip)">
+              <rect class="fill-rect" id="fillRect"
+                    x="0" y="500" width="400" height="0" fill="#009eed" />
+            </g>
+          </svg>
+        </div>
+
+        <div class="promoted-text">
+          <div class="text-block" id="textBlock1">
+            Of the {{ total_tweets|default:"X" }} tweets that you've viewed since {{ since_date|default:"Y" }}, <strong>{{ promoted_percentage|default:"Z" }}%</strong> of them were labeled as Promoted.
+          </div>
+          <div class="text-block" id="textBlock2">
+            <strong>The top five users you had promoted to your feed were:</strong>
+            <ol class="users-list" id="usersList">
+              {% for user in top_users %}
+                <li>{{ forloop.counter }}. {{ user }}</li>
+              {% empty %}
+                <li>1. {{ top_user_one|default:"top_user_one" }}</li>
+                <li>2. {{ top_user_two|default:"top_user_two" }}</li>
+                <li>3. {{ top_user_three|default:"top_user_three" }}</li>
+                <li>4. {{ top_user_four|default:"top_user_four" }}</li>
+                <li>5. {{ top_user_five|default:"top_user_five" }}</li>
+              {% endfor %}
+            </ol>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- PAGE 3: Sentiment -->
+
+    <section class="page page-intro" id="page-intro">
+    <div class="page-content">
+      <div class="intro-card">
+        <h1>How do your tweets feel?</h1>
+        <p>
+        We used the <strong><a href="https://huggingface.co/cardiffnlp/twitter-roberta-base-sentiment-latest">roBERTa</a></strong> model, trained on 124 million tweets, to analyze the sentiment of each post in your feed.
+        The model classifies each tweet as Negative, Neutral, or Positive. Your overall sentiment score ranges from -1 (most negative) to +1 (most positive),
+        calculated by averaging all tweet sentiments. This score reveals the emotional tone of content you're exposed to.
+        </p>
+      </div>
+    </div>
+  </section>
+
+  <section class="page page-sentiment" id="page-sentiment">
+    <div class="page-content">
+      <div class="sentiment-content">
+        <div class="sentiment-header">
+          <h1>Sentiment Analysis</h1>
+        </div>
+
+        <div class="summary-card">
+          <div class="summary-text">
+            The sentiments of your tweets were
+            <span class="num" id="pct-positive">—</span> positive,
+            <span class="num" id="pct-negative">—</span> negative, and
+            <span class="num" id="pct-neutral">—</span> neutral, so the overall general sentiment was
+            <span class="tag" id="overall-label">—</span>.
+          </div>
+          <div class="blurb" id="blurb">Calculating sentiment profile…</div>
+        </div>
+
+        <div class="dial-card">
+          <svg class="dial-svg" viewBox="0 0 600 260" xmlns="http://www.w3.org/2000/svg">
+            <path d="M 100 220 A 200 200 0 0 1 200 46.41" fill="none" stroke="#d64545" stroke-width="44"/>
+            <path d="M 200 46.41 A 200 200 0 0 1 400 46.41" fill="none" stroke="#f5d90a" stroke-width="44"/>
+            <path d="M 400 46.41 A 200 200 0 0 1 500 220" fill="none" stroke="#1f9d55" stroke-width="44"/>
+            <path d="M 122 220 A 178 178 0 0 1 478 220" fill="none" stroke="#e0e0e0" stroke-width="2"/>
+
+            <g class="needle" id="needle">
+              <polygon points="300,40 290,215 310,215" fill="#213847"/>
+              <path d="M 282 220 A 18 18 0 0 0 318 220 Z" fill="#213847"/>
+              <circle cx="300" cy="220" r="4" fill="#ffffff"/>
+            </g>
+          </svg>
+          <div class="scale-row">
+            <span>Negative</span>
+            <span>Neutral</span>
+            <span>Positive</span>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- PAGE 4: Word Cloud -->
+
+  <section class="page page-intro" id="page-intro">
+    <div class="page-content">
+      <div class="intro-card">
+        <h1>What words do you see the most? How do they shape your experience?</h1>
+      </div>
+    </div>
+  </section>
+
+
+  <section class="page page-wordcloud" id="page-wordcloud">
+    <div class="page-content">
+      <div class="wordcloud-wrapper">
+        <div class="wordcloud-header">
+          <h1>Top 20 Words in Your Feed by Frequency</h1>
+        </div>
+        <div class="wordcloud-container">
+          <div id="wordcloud"></div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+   <!-- PAGE 4: LLM Analysis -->
+
+  <section class="page page-intro" id="page-intro">
+    <div class="page-content">
+      <div class="intro-card">
+        <h1>Who does your feed think you are?</h1>
+        <p>
+          We took a random selection of 50 of your tweets and prompted a local LLM model to imagine who you were based on them. Are you a Meme-Savvy Adventurer, or
+          a Sports Fanatic with a Soft Side for Cat Picture? Let's find out:
+        </p>
+      </div>
+    </div>
+  </section>
+
+  <section class="page page-intro" id="page-summary">
+    <div class="page-content">
+      <div class="intro-card">
+        <h1>Here's your final summary:</h1>
+        <p id="reflectionText">Generating your summary…</p>
+      </div>
+    </div>
+  </section>
+
+</div>
+
+<div class="tooltip" id="tooltip"></div>
+
+</div>
+
+<!-- Vertical Scroll navigation-->
+<div class="scroll-nav">
+  <button class="scroll-nav-dot" data-page="page-topics" title="Topics"></button>
+  <button class="scroll-nav-dot" data-page="page-promoted" title="Promoted"></button>
+  <button class="scroll-nav-dot" data-page="page-sentiment" title="Sentiment"></button>
+  <button class="scroll-nav-dot" data-page="page-wordcloud" title="Word Cloud"></button>
+</div>
+
+<div class="tooltip" id="tooltip"></div>
+
+<!-- Libraries -->
+<script src="https://cdn.jsdelivr.net/npm/echarts@5/dist/echarts.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/d3/7.8.5/d3.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/d3-cloud/1.2.7/d3.layout.cloud.min.js"></script>
+
+<script>
+  /* Data containers populated by the fetch */
+  let topicsData, sentimentData, wordcloudData, promotedPercentage;
+  let overviewData, llmAnalysisData;
+
+  async function loadFeedSummary() {
+    const response = await fetch("/api/feed-summary/");
+    if (!response.ok) {
+      throw new Error(`HTTP error! status: ${response.status}`);
+    }
+    const text = await response.text();
+    let data;
+    try {
+      data = JSON.parse(text);
+    } catch (e) {
+      console.error('Response was not JSON. First 500 chars:', text.slice(0, 500));
+      throw e;
+    }
+
+    /* Probably only needs one given its all or nothing, but  */
+    const hasData =
+      data.categories?.labels?.length > 0 &&
+      data.sentiment?.sentiment_average != null &&
+      data.word_frequency?.labels?.length > 0;
+
+    if (!hasData) throw new Error("No Data");
+
+    /* Splitting the data up by type and wear its going */
+
+    topicsData = data.categories;
+
+    sentimentData = {
+      sentiment_average: [data.sentiment.sentiment_average],
+      labels: data.sentiment.labels,
+      series: data.sentiment.series,
+    };
+
+    wordcloudData = {
+      word: data.word_frequency.labels,
+      series: data.word_frequency.series,
+    };
+
+    overviewData = data.overview;
+    promotedPercentage = data.overview.promoted_percentage;
+    populatePromotedText(data.overview);
+    populateReflection(data.llm_analysis);
+  }
+
+  /*Basic HTML page to show in case of having no data */
+  function showFallbackPage() {
+  const deck = document.getElementById('deck');
+  deck.innerHTML = `
+    <section class="page" style="display:flex; align-items:center; justify-content:center;">
+      <div style="text-align:center; max-width:480px; padding:2rem;">
+        <h1>No Feed Data</h1>
+        <p style="margin:1rem 0 1.5rem">
+          We don't have any data from your feed yet. Check out our <a href=https://clearfeed.civic.garden/onboarding/>onboarding process</a>
+           to see how you can scroll your X/Twitter feed with the extension.
+        </p>
+        <p style="margin:1rem 0 1.5rem">
+          After scrolling, refresh this page to load your report.
+        </p>
+      </div>
+    </section>
+  `;
+  }
+
+  /*Getting the text to drop in the promoted section*/
+  function populatePromotedText(overview) {
+    const tb1 = document.getElementById('textBlock1');
+    tb1.innerHTML =
+      `Of the ${overview.total_tweets} tweets that you've viewed since ` +
+      `${overview.since_date}, <strong>${overview.promoted_percentage}%</strong> ` +
+      `of them were labeled as Promoted.`;
+
+    const ul = document.getElementById('usersList');
+    ul.innerHTML = '';
+    overview.top_users.forEach((user, i) => {
+      const li = document.createElement('li');
+      li.textContent = `${i + 1}. ${user}`;
+      ul.appendChild(li);
+    });
+  }
+
+  /* ECharts bar */
+  let barChart;
+  function renderTopics() {
+    if (barChart) return;
+    const el = document.getElementById('barChart');
+    barChart = echarts.init(el);
+
+    const COLORS = ['#1E3A5F', '#9B2226', '#F48C06', '#F9C74F', '#A5C8E1'];
+
+    barChart.setOption({
+      textStyle: { color: '#8a8fa8', fontFamily: 'sans-serif' },
+      tooltip: { trigger: 'axis' },
+      xAxis: {
+        type: 'category',
+        data: topicsData.labels,
+        nameGap: 23,
+        axisLine: { lineStyle: { color: '#2a2d3a' } },
+        axisLabel: { color: '#8a8fa8',
+          interval: 0,
+          width: 90,
+          overflow: 'break',
+         },
+      },
+      yAxis: {
+        type: 'value',
+        name: "Frequency (%)",
+        splitLine: { lineStyle: { color: '#2a2d3a' } },
+        axisLabel: { color: '#8a8fa8' },
+      },
+      grid: { left: '3%', right: '4%', bottom: '3%', containLabel: true },
+      series: [{
+        name: topicsData.series[0].name,
+        type: 'bar',
+        data: topicsData.series[0].data,
+        itemStyle: {
+          color: (p) => COLORS[p.dataIndex % COLORS.length],
+          borderRadius: [4, 4, 0, 0],
+        },
+      }],
+    });
+
+    window.addEventListener('resize', () => barChart && barChart.resize());
+  }
+
+  /* Promoted Animations */
+  let promotedAnimated = false;
+  function animatePromoted() {
+    if (promotedAnimated) return;
+    promotedAnimated = true;
+
+    const dollarSvg = document.getElementById('dollarSvg');
+    const fillRect  = document.getElementById('fillRect');
+    const textBlock1 = document.getElementById('textBlock1');
+    const textBlock2 = document.getElementById('textBlock2');
+    const userItems = document.querySelectorAll('#usersList li');
+
+    const TIMING = {
+      dollarFadeIn: 300,
+      fillStart: 1000,
+      textBlock1: 3300,
+      textBlock2: 4400,
+      usersStart: 5200,
+      userInterval: 500
+    };
+
+    /*the setTimeout creates the small gap in the animations */
+
+    setTimeout(() => dollarSvg.classList.add('visible'), TIMING.dollarFadeIn);
+
+    setTimeout(() => {
+      const totalHeight = 500;
+      const fillHeight = (promotedPercentage / 100) * totalHeight;
+      fillRect.setAttribute('y', totalHeight - fillHeight);
+      fillRect.setAttribute('height', fillHeight);
+    }, TIMING.fillStart);
+
+    setTimeout(() => textBlock1.classList.add('visible'), TIMING.textBlock1);
+    setTimeout(() => textBlock2.classList.add('visible'), TIMING.textBlock2);
+
+    const reversed = [...userItems].reverse();
+    reversed.forEach((item, i) => {
+      setTimeout(() => item.classList.add('visible'),
+                 TIMING.usersStart + i * TIMING.userInterval);
+    });
+  }
+
+  /* Sentiment  */
+  function classifyOverall(score) {
+    if (score <= -0.33) return { word: "Negative", cls: "negative" };
+    if (score >=  0.33) return { word: "Positive", cls: "positive" };
+    return { word: "Neutral", cls: "neutral" };
+  }
+  function blurbFor(cls, score) {
+    const s = score.toFixed(2);
+    if (cls === "positive") return `A score of ${s} suggests a positive tone — the majority of posts trend toward approval, optimism, or support.`;
+    if (cls === "negative") return `A score of ${s} suggests a negative tone — most posts express disapproval, frustration, or concern.`;
+    return `A score of ${s} suggests that your posts are largely informational or evenly split between approval and dissent.`;
+  }
+
+  let sentimentReady = false;
+
+  /*Helper function that sets all of the dynamics used in the sentiment dial */
+  function prepSentiment() {
+    if (sentimentReady) return;
+    sentimentReady = true;
+    const score = sentimentData.sentiment_average[0];
+    const [neg, neu, pos] = sentimentData.series[0].data;
+
+    document.getElementById("pct-positive").textContent = pos + "%";
+    document.getElementById("pct-negative").textContent = neg + "%";
+    document.getElementById("pct-neutral").textContent  = neu + "%";
+
+    const overall = classifyOverall(score);
+    const labelEl = document.getElementById("overall-label");
+    console.log(labelEl);
+    labelEl.textContent = overall.word;
+    labelEl.classList.add(overall.cls);
+    document.getElementById("blurb").textContent = blurbFor(overall.cls, score);
+  }
+
+  /*Boolean check makes sure that the animation only happens once and stick there*/
+
+  let sentimentAnimated = false;
+  function animateSentiment() {
+    if (sentimentAnimated) return;
+    sentimentAnimated = true;
+
+    const score = sentimentData.sentiment_average[0];
+    const clamped = Math.max(-1, Math.min(1, score));
+    const angle = clamped * 90;
+
+    const needle = document.getElementById("needle");
+    needle.style.transform = "rotate(-90deg)";
+    requestAnimationFrame(() => {
+      setTimeout(() => { needle.style.transform = `rotate(${angle}deg)`; }, 250);
+    });
+  }
+
+  /* Word Cloud */
+  let wcRendered = false;
+  function renderWordcloud() {
+    if (wcRendered) return;
+    wcRendered = true;
+
+    const tooltip = document.getElementById('tooltip');
+    const width = 840;
+    const height = 480;
+
+    const seriesName = wordcloudData.series[0].name;
+    const frequencies = wordcloudData.series[0].data;
+    const minFreq = Math.min(...frequencies);
+    const maxFreq = Math.max(...frequencies);
+
+    const fontScale = d3.scaleSqrt().domain([minFreq, maxFreq]).range([14, 64]);
+
+    const words = wordcloudData.word.map((w, i) => ({
+      text: w,
+      frequency: frequencies[i],
+      size: fontScale(frequencies[i])
+    }));
+
+    const color = d3.scaleOrdinal(d3.schemeTableau10);
+
+    d3.layout.cloud()
+        .size([width, height])
+        .words(words)
+        .padding(3)
+        .rotate(() => (Math.random() < 0.5 ? 0 : 90))
+        .font("sans-serif")
+        .fontSize(d => d.size)
+        .spiral("archimedean")
+        .on("end", draw)
+        .start();
+
+    function draw(placedWords) {
+      const svg = d3.select("#wordcloud")
+          .append("svg")
+          .attr("viewBox", `0 0 ${width} ${height}`)
+          .attr("preserveAspectRatio", "xMidYMid meet");
+
+      svg.append("g")
+          .attr("transform", `translate(${width / 2}, ${height / 2})`)
+          .selectAll("text")
+          .data(placedWords)
+          .enter()
+          .append("text")
+          .attr("class", "word-text")
+          .style("font-size", d => `${d.size}px`)
+          .style("font-family", "sans-serif")
+          .style("font-weight", "600")
+          .style("fill", (d, i) => color(i))
+          .attr("text-anchor", "middle")
+          .attr("transform", d => `translate(${d.x}, ${d.y}) rotate(${d.rotate})`)
+          .text(d => d.text)
+          .on("mouseenter", function(event, d) {
+            tooltip.textContent = `${d.text}: ${d.frequency} (${seriesName})`;
+            tooltip.classList.add('visible');
+          })
+          .on("mousemove", function(event) {
+            tooltip.style.left = (event.clientX + 12) + 'px';
+            tooltip.style.top = (event.clientY + 12) + 'px';
+          })
+          .on("mouseleave", function() {
+            tooltip.classList.remove('visible');
+          });
+    }
+  }
+
+  /* Scroll Animations — now waits for data before observing */
+  document.addEventListener('DOMContentLoaded', async () => {
+    try {
+      await loadFeedSummary();
+    } catch (err) {
+      console.error('Failed to load feed summary:', err);
+      showFallbackPage();  // Error handling for no data being present
+      return;
+    }
+
+    prepSentiment();  // fill text immediately, now that data exists
+
+    const triggers = {
+      'page-topics':    renderTopics,
+      'page-promoted':  animatePromoted,
+      'page-sentiment': animateSentiment,
+      'page-wordcloud': renderWordcloud,
+    };
+
+    const io = new IntersectionObserver((entries) => {
+      entries.forEach(en => {
+        if (en.isIntersecting && triggers[en.target.id]) {
+          triggers[en.target.id]();
+        }
+      });
+    }, { threshold: 0.4 });
+
+    Object.keys(triggers).forEach(id => {
+      const el = document.getElementById(id);
+      if (el) io.observe(el);
+    });
+  });
+
+  /* Vertical Scroll Navigatory */
+    const navDots = document.querySelectorAll('.scroll-nav-dot');
+    const pages = [
+      document.getElementById('page-topics'),
+      document.getElementById('page-promoted'),
+      document.getElementById('page-sentiment'),
+      document.getElementById('page-wordcloud')
+    ].filter(p => p);
+
+    navDots.forEach(dot => {
+      dot.addEventListener('click', () => {
+        const pageId = dot.dataset.page;
+        const page = document.getElementById(pageId);
+        page.scrollIntoView({ behavior: 'smooth' });
+      });
+    });
+
+    const deck = document.getElementById('deck');
+    deck.addEventListener('scroll', () => {
+      pages.forEach((page, index) => {
+        const rect = page.getBoundingClientRect();
+        if (rect.top < window.innerHeight / 2 && rect.bottom > window.innerHeight / 2) {
+          navDots.forEach(d => d.classList.remove('active'));
+          navDots[index].classList.add('active');
+        }
+      });
+    });
+
+    function populateReflection(llm) {
+    const el = document.getElementById('reflectionText');
+
+    // status === 'complete' (or any done state) with a reflection
+    if (llm.reflection && llm.reflection.trim()) {
+      el.textContent = llm.reflection;
+    } else {
+      el.textContent = "No summary is available for your feed.";
+    }
+  }
+
+</script>
+
+{% endblock %}

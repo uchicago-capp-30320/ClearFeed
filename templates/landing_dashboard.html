@@ -1,0 +1,28 @@
+    {% extends "base.html" %}
+    {% block content %}
+    <main class="dashboard">
+        <h1 class="welcome">Welcome back, {{ user.username|default:"User" }}!</h1>
+
+        <section class="stat-grid">
+            <div class="stat-box stat-box--sessions">
+                <p class="stat-value">{{ data.sessions_logged.0 }}</p>
+                <p class="stat-label">Sessions Logged</p>
+            </div>
+
+            <div class="stat-box stat-box--posts">
+                <p class="stat-value">{{ data.posts_seen.0 }}</p>
+                <p class="stat-label">Posts Seen</p>
+            </div>
+
+            <div class="stat-box stat-box--scroll-date">
+                <p class="stat-label">Last Scroll Date:</p>
+                <p class="stat-value">{{ data.last_scroll_date.0 }}</p>
+            </div>
+        </section>
+
+        <nav class="dashboard-nav">
+            <a href="{% url 'settings' %}" class="nav-link nav-link--prev">&larr; Settings</a>
+            <a href="{% url 'full_statistics' %}" class="nav-link nav-link--next">Full Statistics &rarr;</a>
+        </nav>
+    </main>
+    {% endblock %}

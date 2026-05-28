@@ -1,0 +1,156 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block content %}
+
+<div class="onboarding-wrapper">
+
+  <section class="hero-card">
+    <img src="{% static 'images/clearfeed-logo.png' %}" alt="ClearFeed logo" class="hero-logo">
+    <h1>Welcome to ClearFeed</h1>
+    <p>You're almost ready. Follow these steps to start understanding your Twitter feed.</p>
+  </section>
+
+  <div id="browser-status" class="banner">
+    Checking your browser...
+  </div>
+
+  <section class="step-card">
+    <div class="step-header">
+      <div class="step-number">1</div>
+      <h2>Check your browser</h2>
+    </div>
+    <p>ClearFeed Capture currently works only on Firefox.</p>
+
+    <div id="firefox-help" style="display:none;">
+      <p>
+        You appear to be using a different browser. Please download Firefox, then return to this page in your new Firefox browser.
+      </p>
+      <a class="secondary-button" href="https://www.mozilla.org/en-US/firefox/new/" target="_blank">
+        Download Firefox
+      </a>
+    </div>
+  </section>
+
+  <section class="step-card">
+    <div class="step-header">
+      <div class="step-number">2</div>
+      <h2>Install ClearFeed</h2>
+    </div>
+
+    <p>
+      The extension runs silently in the background while you browse Twitter, capturing what appears in your feed.
+      It never accesses your Twitter password or personal information.
+    </p>
+
+    <a
+      id="install-button"
+      class="primary-button disabled"
+      href="https://github.com/teddykolios11/ClearFeed-Capture/releases/latest/download/62fc9d80cc0f43f29587-1.1.5.xpi"
+    >
+      Install ClearFeed Extension
+    </a>
+
+    <div class="mini-note">
+      Firefox will ask you to confirm the installation. Click <strong>Add</strong>. Once installed, the ClearFeed icon should appear in your Firefox toolbar.
+    </div>
+  </section>
+
+  <section class="step-card">
+    <div class="step-header">
+      <div class="step-number">3</div>
+      <h2>Browse Twitter</h2>
+    </div>
+
+    <p>
+      Open Twitter/X in this same Firefox window, in a new tab and scroll through your home feed.
+      The extension captures tweets automatically.
+    </p>
+
+    <ul>
+      <li>Scroll at your normal pace, do not rush too quickly.</li>
+      <li>Browse for at least <strong>2–3 minutes</strong> for meaningful analysis.</li>
+      <li>The longer you scroll, the longer analysis may take.</li>
+    </ul>
+  </section>
+
+  <section class="step-card">
+    <div class="step-header">
+      <div class="step-number">4</div>
+      <h2>Upload your data</h2>
+    </div>
+
+    <p>
+      When you are done browsing, go back to the ClearFeed Capture tab.
+    </p>
+
+    <ol>
+      <li>Click <strong>To ClearFeed</strong>.</li>
+      <li>Wait for <strong>Upload complete!</strong>.</li>
+    </ol>
+
+    <div class="mini-note">
+      Do not close the browser while uploading. If you do not want to upload your results, click <strong>Delete</strong> instead.
+    </div>
+  </section>
+
+  <section class="step-card">
+    <div class="step-header">
+      <div class="step-number">5</div>
+      <h2>View your results</h2>
+    </div>
+
+    <p>
+      After uploading, ClearFeed Capture analyzes your feed in the background. Results are usually ready within a minute.
+    </p>
+
+    <a class="primary-button" href="{% url 'home' %}">
+      Go to Dashboard
+    </a>
+  </section>
+
+  <section class="faq-section">
+    <h2>FAQ</h2>
+
+    <details>
+      <summary>Why does ClearFeed require Firefox?</summary>
+      <p>The extension uses Firefox's WebExtension API. Chrome and Safari are not currently supported.</p>
+    </details>
+
+    <details>
+      <summary>Does ClearFeed Capture store my Twitter password?</summary>
+      <p>No. ClearFeed Capture only captures tweets that appear on your screen as you scroll. It never accesses your login credentials.</p>
+    </details>
+
+    <details>
+      <summary>Why isn't my analysis showing yet?</summary>
+      <p>Analysis runs in the background after upload. Wait about a minute and refresh the dashboard.</p>
+    </details>
+
+    <details>
+      <summary>Can I upload multiple times?</summary>
+      <p>Yes. Each upload creates a new browsing session. For best results, refresh your feed between browsing sessions.</p>
+    </details>
+  </section>
+
+</div>
+
+<script>
+  const isFirefox = navigator.userAgent.includes("Firefox");
+  const browserStatus = document.getElementById("browser-status");
+  const firefoxHelp = document.getElementById("firefox-help");
+  const installButton = document.getElementById("install-button");
+
+  if (isFirefox) {
+    browserStatus.className = "banner banner-success";
+    browserStatus.innerHTML = "You're using Firefox, you're good to go!";
+    installButton.classList.remove("disabled");
+  } else {
+    browserStatus.className = "banner banner-warning";
+    browserStatus.innerHTML = "WARNING: ClearFeed requires Firefox. You appear to be using a different browser.";
+    firefoxHelp.style.display = "block";
+    installButton.classList.add("disabled");
+  }
+</script>
+
+{% endblock %}

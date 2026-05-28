@@ -1,0 +1,213 @@
+{% extends "base.html" %}
+{% load static %}
+{% block content %}
+
+<style>
+  :root {
+    --cf-blue: #009eed;
+    --cf-dark: #213847;
+    --cf-muted: #5f6f7a;
+  }
+
+  body {
+    background: linear-gradient(180deg, #e7f7ff 0%, #ffffff 45%, #e7f7ff 100%);
+    font-family: Helvetica, Arial, sans-serif;
+    color: var(--cf-dark);
+  }
+
+  .home-wrapper {
+    min-height: 85vh;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 40px 20px;
+  }
+
+  .home-card {
+    width: 100%;
+    max-width: 680px;
+    background: white;
+    border: 3px solid var(--cf-dark);
+    border-radius: 8px;
+    text-align: center;
+    box-shadow: 0 10px 0 rgba(33, 56, 71, 0.14);
+    padding: 28px 46px;
+    margin-bottom: 40px;
+  }
+
+  .home-logo {
+    width: 100px;
+    margin-bottom: 0px;
+  }
+
+  .home-card h1 {
+    font-size: 30px;
+    margin-bottom: 14px;
+    font-weight: 600;
+  }
+
+  .home-card p {
+    color: var(--cf-muted);
+    font-size: 17px;
+    line-height: 1.6;
+    margin-bottom: 5px;
+  }
+
+  .home-button {
+    display: inline-block;
+    background: #009eed;
+    color: white;
+    text-decoration: none;
+    padding: 13px 24px;
+    border-radius: 10px;
+    border: 1px solid var(--cf-dark);
+    font-weight: 800;
+    box-shadow: 0 4px 0 rgba(33, 56, 71, 0.18);
+  }
+
+  .home-button:hover {
+    transform: translateY(1px);
+  }
+
+  .stats-container {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+    gap: 16px;
+    width: 100%;
+    max-width: 520px;
+  }
+
+  .stat-box {
+    background: white;
+    border: 2px solid var(--cf-dark);
+    border-radius: 8px;
+    padding: 24px 16px;
+    text-align: center;
+    box-shadow: 0 4px 0 rgba(33, 56, 71, 0.08);
+  }
+
+  .stat-number {
+    font-size: 32px;
+    font-weight: 800;
+    color: var(--cf-blue);
+    margin-bottom: 8px;
+  }
+
+  .stat-label {
+    font-size: 13px;
+    color: var(--cf-muted);
+    font-weight: 600;
+    line-height: 1.4;
+  }
+</style>
+
+<div class="home-wrapper">
+
+  <div class="home-card">
+
+    {% if user.is_authenticated %}
+    <h1>Welcome back, {{ user.email }}</h1>
+    <p>
+        Here's what ClearFeed knows about your feed so far.
+    </p>
+
+    {% else %}
+      <p>
+        Understand what your Twitter/X feed is showing you.
+      </p>
+
+      <a href="{% url 'login' %}" class="home-button">
+        Sign in
+      </a>
+    {% endif %}
+  </div>
+
+{% if user.is_authenticated %}
+<div style="width: 100%; max-width: 520px; display: flex; flex-direction: column; gap: 40px;">
+
+  <div class="stats-container" data-stats-endpoint="/api/home-summary/">
+    <div class="stat-box">
+      <div class="stat-number" id="stat-total-sessions">—</div>
+      <div class="stat-label">Total no. of scrolling sessions</div>
+    </div>
+    <div class="stat-box">
+      <div class="stat-number" id="stat-total-tweets">—</div>
+      <div class="stat-label">No. of tweets analyzed</div>
+    </div>
+    <div class="stat-box">
+      <div class="stat-number" id="stat-days-since-last">—</div>
+      <div class="stat-label">Days since the last session</div>
+    </div>
+  </div>
+
+  <a href="{% url 'feed_summary' %}" class="home-button" style="display: block; text-align: center; width: 100%; box-sizing: border-box;">
+    See Your Full Analysis →
+  </a>
+
+  <div style="background: white; border: 2px solid var(--cf-dark); border-radius: 8px; padding: 20px 24px; box-shadow: 0 4px 0 rgba(33,56,71,0.08);">
+    <p style="font-weight: 800; font-size: 15px; margin: 0 0 8px; color: var(--cf-dark);">Ready to scroll?</p>
+    <p style="font-size: 14px; color: var(--cf-muted); margin: 0 0 12px; line-height: 1.6;">The more you scroll, the richer your analysis gets. Open Firefox, fire up the ClearFeed Capture extension and Twitter in the same window, and start scrolling — then hit <strong>To ClearFeed</strong> when you're done.</p>
+    <div style="background: #e8f6fd; border-radius: 6px; padding: 10px 14px; font-size: 13px; color: var(--cf-dark);">
+      Make sure you're using Firefox — the extension only works there.
+    </div>
+    <p style="font-size: 13px; color: var(--cf-muted); margin: 12px 0 0; text-align: center;">
+        Need help getting started? <a href="{% url 'onboarding' %}" style="color: var(--cf-blue); font-weight: 700;">Check out the setup guide</a>
+    </p>
+  </div>
+
+</div>
+{% endif %}
+
+
+{% if user.is_authenticated %}
+<script>
+  async function loadHomeSummary() {
+    /* Fetch for the data */
+    const container = document.querySelector(".stats-container");
+    if (!container) return;
+
+    const endpoint = container.dataset.statsEndpoint;
+
+    const response = await fetch("/api/home-summary/");
+    if (!response.ok) {
+      throw new Error(`HTTP error! status: ${response.status}`);
+    }
+
+    const text = await response.text();
+    let data;
+    try {
+      data = JSON.parse(text);
+    } catch (e) {
+      console.error('Response was not JSON. First 500 chars:', text.slice(0, 500));
+      throw e;
+    }
+
+    const stats = data.summary_stats || {};
+
+    const sessionsEl = document.getElementById("stat-total-sessions");
+    const tweetsEl = document.getElementById("stat-total-tweets");
+    const daysEl = document.getElementById("stat-days-since-last");
+
+    /* Basic script that catches if someone has new data or some other error like processing, just makes it look like dashes*/
+
+    if (sessionsEl && stats.total_sessions != null) {
+      sessionsEl.textContent = stats.total_sessions.toLocaleString();
+    }
+    if (tweetsEl && stats.total_tweets != null) {
+      tweetsEl.textContent = stats.total_tweets.toLocaleString();
+    }
+    if (daysEl && stats.days_since_last != null) {
+      daysEl.textContent = stats.days_since_last.toLocaleString();
+    }
+  }
+
+  document.addEventListener("DOMContentLoaded", function () {
+    loadHomeSummary().catch(function (error) {
+      console.error("Could not load home summary stats:", error);
+    });
+  });
+</script>
+{% endif %}
+
+{% endblock %}

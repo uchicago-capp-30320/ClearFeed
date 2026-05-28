@@ -1,0 +1,172 @@
+{% extends "base.html" %}
+
+{% block title %}Home Page{% endblock %}
+
+{% block content %}
+
+<style>
+  .landing-wrapper {
+    max-width: 1000px;
+    margin: 0 auto;
+    padding: 60px 20px 80px;
+  }
+
+  .landing-hero {
+    text-align: center;
+    margin-bottom: 60px;
+  }
+
+  .landing-hero h1 {
+    font-size: 48px;
+    margin-bottom: 20px;
+  }
+
+  .landing-hero-subtitle {
+    font-size: 18px;
+    color: var(--cf-muted);
+    line-height: 1.8;
+    margin-bottom: 40px;
+    max-width: 700px;
+    margin-left: auto;
+    margin-right: auto;
+  }
+
+  .landing-cta {
+    display: flex;
+    gap: 16px;
+    justify-content: center;
+    margin-bottom: 60px;
+    flex-wrap: wrap;
+  }
+
+  .landing-content {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 32px;
+    margin-bottom: 50px;
+  }
+
+  .content-block {
+    background: white;
+    border: 2px solid var(--cf-border);
+    border-radius: 12px;
+    padding: 28px;
+    box-shadow: 0 4px 0 rgba(33, 56, 71, 0.08);
+  }
+
+  .content-block h2 {
+    color: var(--cf-blue);
+    font-size: 22px;
+    margin-bottom: 14px;
+  }
+
+  .content-block p {
+    color: var(--cf-muted);
+    font-size: 15px;
+    line-height: 1.7;
+  }
+
+  .privacy-section {
+    text-align: center;
+    background: var(--cf-light-blue);
+    border: 2px solid var(--cf-border);
+    border-radius: 12px;
+    padding: 32px 28px;
+  }
+
+  .privacy-section h3 {
+    margin-bottom: 12px;
+  }
+
+  .privacy-section p {
+    color: var(--cf-muted);
+    margin-bottom: 16px;
+  }
+
+  .privacy-links {
+    display: flex;
+    gap: 12px;
+    justify-content: center;
+    flex-wrap: wrap;
+  }
+
+  .privacy-links a {
+    color: var(--cf-blue);
+    font-weight: 600;
+    text-decoration: none;
+  }
+
+  .privacy-links a:hover {
+    text-decoration: underline;
+  }
+
+  @media (max-width: 768px) {
+    .landing-wrapper {
+      padding: 40px 16px 60px;
+    }
+
+    .landing-hero h1 {
+      font-size: 36px;
+    }
+
+    .landing-content {
+      grid-template-columns: 1fr;
+      gap: 20px;
+    }
+
+    .landing-cta {
+      flex-direction: column;
+      gap: 12px;
+    }
+
+    .landing-cta .primary-button,
+    .landing-cta .secondary-button {
+      width: 100%;
+    }
+  }
+</style>
+
+<div class="landing-wrapper">
+
+  <section class="landing-hero">
+    <h1>Welcome to ClearFeed</h1>
+    <p class="landing-hero-subtitle">
+      Understand what algorithms are showing you. Get insights into your social media feed with transparency and control.
+    </p>
+
+    <div class="landing-cta">
+      <a href="{% url 'signup' %}" class="primary-button">Create Account</a>
+      <a href="#learn-more" class="secondary-button">Learn More</a>
+    </div>
+  </section>
+
+  <section class="landing-content" id="learn-more">
+    <div class="content-block">
+      <h2>The Problem</h2>
+      <p>
+        Social media platforms serve users an endless stream of content curated by black-box algorithms. People scroll through hundreds of posts daily without understanding the big picture of what is being recommended to them and whether this actually aligns with their interests.
+      </p>
+    </div>
+
+    <div class="content-block">
+      <h2>Our Solution</h2>
+      <p>
+        ClearFeed is a tool that gives you a transparent look at your Twitter/X feed. Using the <a href="https://github.com/teddykolios11/ClearFeed-Capture">ClearFeed Capture</a> browser extension, ClearFeed captures posts as you scroll and runs NLP analyses to surface topic categories, feed sentiment, ad content, most common words, and a personalized character blurb — all based on what appeared in your feed.
+      </p>
+    </div>
+  </section>
+
+  <section class="privacy-section">
+    <h3>Your Privacy Matters</h3>
+    <p>
+      Your data is analyzed on our servers and stored securely. We never sell or share your personal data with third parties.
+    <div class="privacy-links">
+      <a href="{% url 'privacy' %}">Read Privacy Policy</a>
+      <span>|</span>
+      <a href="{% url 'signup' %}">Get Started</a>
+    </div>
+  </section>
+
+</div>
+
+{% endblock %}

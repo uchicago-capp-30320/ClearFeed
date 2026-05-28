@@ -13,12 +13,43 @@ https://docs.djangoproject.com/en/6.0/ref/settings/
 import dj_database_url
 from pathlib import Path
 import os
+import sys
+import types
+import structlog
 from dotenv import load_dotenv
 
 load_dotenv()
 
+
+def _base62_encode(value):
+    alphabet = "0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz"
+    if value == 0:
+        return "0"
+
+    encoded = []
+    while value:
+        value, remainder = divmod(value, 62)
+        encoded.append(alphabet[remainder])
+    return "".join(reversed(encoded))
+
+
+def _base62_decode(value):
+    alphabet = "0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz"
+    decoded = 0
+    for char in value:
+        decoded = decoded * 62 + alphabet.index(char)
+    return decoded
+
+
+baseconv_module = types.ModuleType("django.utils.baseconv")
+baseconv_module.base62 = types.SimpleNamespace(
+    encode=_base62_encode,
+    decode=_base62_decode,
+)
+sys.modules.setdefault("django.utils.baseconv", baseconv_module)
+
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
-BASE_DIR = Path(__file__).resolve().parent.parent
+BASE_DIR = Path(__file__).resolve().parent.parent  # ClearFeed/backend/
 
 
 # Quick-start development settings - unsuitable for production
@@ -27,11 +58,26 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 # SECURITY WARNING: keep the secret key used in production secret!
 SECRET_KEY = os.environ.get("SECRET_KEY")
 
-# SECURITY WARNING: don't run with debug turned on in production!
-DEBUG = True
+DEBUG = os.environ.get("DEBUG", "False") == "True"
 
-ALLOWED_HOSTS = ["*"]  # ALLOWING ALL ONLY FOR LOCAL DEV TESTING!!
+ALLOWED_HOSTS = (
+    ["*"]
+    if DEBUG
+    else os.environ.get("ALLOWED_HOSTS", "clearfeed.civic.garden").split(",")
+)
 
+CSRF_TRUSTED_ORIGINS = [
+    "https://clearfeed.civic.garden",
+    "http://localhost:8000",
+]
+
+if not DEBUG:
+    CONN_MAX_AGE = 600
+    CSRF_COOKIE_SECURE = True
+    SESSION_COOKIE_SECURE = True
+    SECURE_SSL_REDIRECT = True
+    SECURE_PROXY_SSL_HEADER = ("HTTP_X_FORWARDED_PROTO", "https")
+    SECURE_HSTS_SECONDS = 3600
 
 # Application definition
 
@@ -41,29 +87,42 @@ INSTALLED_APPS = [
     "django.contrib.contenttypes",
     "django.contrib.sessions",
     "django.contrib.messages",
+    "whitenoise.runserver_nostatic",
     "django.contrib.staticfiles",
+    "django_structlog",
+    "crispy_forms",
+    "crispy_bootstrap3",  # using crispy forms for frontend
     "rest_framework",  # adding Django REST framework to help with building endpoints
-    "corsheaders",  # adding CORS library to allow browser extension to make requests to Django server
     "api",  # adding app so Django recognizes everything in that folder
+    "django_q",
 ]
 
 MIDDLEWARE = [
-    "corsheaders.middleware.CorsMiddleware",  # activates CORS protection for Django server
     "django.middleware.security.SecurityMiddleware",
+    "whitenoise.middleware.WhiteNoiseMiddleware",
     "django.contrib.sessions.middleware.SessionMiddleware",
     "django.middleware.common.CommonMiddleware",
     "django.middleware.csrf.CsrfViewMiddleware",
     "django.contrib.auth.middleware.AuthenticationMiddleware",
     "django.contrib.messages.middleware.MessageMiddleware",
     "django.middleware.clickjacking.XFrameOptionsMiddleware",
+    "django_structlog.middlewares.RequestMiddleware",
 ]
+
+Q_CLUSTER = {
+    "name": "clearfeed",
+    "workers": 2,  # allows for parallel processing, but still small?
+    "timeout": 1200,  # 20 minutes
+    "retry": 1500,  # must be larger than timeout
+    "orm": "default",
+}
 
 ROOT_URLCONF = "clearfeed_django.urls"
 
 TEMPLATES = [
     {
         "BACKEND": "django.template.backends.django.DjangoTemplates",
-        "DIRS": [],
+        "DIRS": [BASE_DIR.parent / "templates"],
         "APP_DIRS": True,
         "OPTIONS": {
             "context_processors": [
@@ -82,6 +141,13 @@ WSGI_APPLICATION = "clearfeed_django.wsgi.application"
 # https://docs.djangoproject.com/en/6.0/ref/settings/#databases
 
 DATABASES = {"default": dj_database_url.config(default=os.environ.get("DATABASE_URL"))}
+
+CACHES = {
+    "default": {
+        "BACKEND": "django.core.cache.backends.locmem.LocMemCache",
+        "LOCATION": "clearfeed-feed-summary",
+    }
+}
 
 
 # Password validation
@@ -102,6 +168,8 @@ AUTH_PASSWORD_VALIDATORS = [
     },
 ]
 
+AUTH_USER_MODEL = "api.AppUser"
+
 
 # Internationalization
 # https://docs.djangoproject.com/en/6.0/topics/i18n/
@@ -115,9 +183,100 @@ USE_I18N = True
 USE_TZ = True
 
 
+# Logging Config ------
+
+DJANGO_STRUCTLOG_IP_LOGGING_ENABLED = False
+DJANGO_STRUCTLOG_USER_ID_FIELD = None
+
+LOG_DIR = BASE_DIR.parent / "_logs"
+LOG_DIR.mkdir(exist_ok=True)
+
+LOGGING = {
+    "version": 1,
+    "disable_existing_loggers": True,
+    "formatters": {
+        "json_formatter": {
+            "()": structlog.stdlib.ProcessorFormatter,
+            "processor": structlog.processors.JSONRenderer(),
+        },
+        "plain_console": {
+            "()": structlog.stdlib.ProcessorFormatter,
+            "processor": structlog.dev.ConsoleRenderer(),
+        },
+        "key_value": {
+            "()": structlog.stdlib.ProcessorFormatter,
+            "processor": structlog.processors.KeyValueRenderer(
+                key_order=["timestamp", "level", "event", "logger"]
+            ),
+        },
+    },
+    "handlers": {
+        "console": {
+            "class": "logging.StreamHandler",
+            "formatter": "plain_console",
+        },
+        "json_file": {
+            "class": "logging.handlers.WatchedFileHandler",
+            "filename": str(LOG_DIR / "log.json"),
+            "formatter": "json_formatter",
+        },
+        "flat_line_file": {
+            "class": "logging.handlers.WatchedFileHandler",
+            "filename": str(LOG_DIR / "flat.log"),
+            "formatter": "key_value",
+        },
+    },
+    "loggers": {
+        "django_structlog": {
+            "handlers": ["console", "flat_line_file", "json_file"],
+            "level": "INFO",
+        },
+        "api": {
+            "handlers": ["console", "flat_line_file", "json_file"],
+            "level": "INFO",
+        },
+    },
+}
+
+structlog.configure(
+    processors=[
+        structlog.contextvars.merge_contextvars,
+        structlog.stdlib.filter_by_level,
+        structlog.processors.TimeStamper(fmt="iso"),
+        structlog.stdlib.add_logger_name,
+        structlog.stdlib.add_log_level,
+        structlog.stdlib.PositionalArgumentsFormatter(),
+        structlog.processors.StackInfoRenderer(),
+        structlog.processors.format_exc_info,
+        structlog.processors.UnicodeDecoder(),
+        structlog.stdlib.ProcessorFormatter.wrap_for_formatter,
+    ],
+    logger_factory=structlog.stdlib.LoggerFactory(),
+    cache_logger_on_first_use=True,
+)
+
+
 # Static files (CSS, JavaScript, Images)
 # https://docs.djangoproject.com/en/6.0/howto/static-files/
 
 STATIC_URL = "static/"
+STATICFILES_DIRS = [
+    BASE_DIR.parent / "static",
+]
+STATIC_ROOT = BASE_DIR.parent / "staticfiles"  # ← add this
 
-CORS_ALLOW_ALL_ORIGINS = True  # JUST FOR NOW FOR LOCAL TESTING
+STORAGES = {
+    "staticfiles": {
+        "BACKEND": "whitenoise.storage.CompressedManifestStaticFilesStorage",
+    },
+}
+
+# Auth-related direction
+
+LOGIN_REDIRECT_URL = "/"
+
+LOGOUT_REDIRECT_URL = "/"
+
+LOGIN_URL = "/login/"  # where @login_required redirects
+
+CRISPY_TEMPLATE_PACK = "bootstrap3"  # crispy forms configuration
