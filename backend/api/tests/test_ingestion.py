@@ -38,7 +38,11 @@ class TestParseNdjson(SimpleTestCase):
         body = '{"item_id":"123", "data":{}}\nheyman%%%heyman%%%\n{"item_id":"789", "data":{}}\n'
         posts = _parse_ndjson(body)
         self.assertEqual(
-            posts, [{"item_id": "123", "data": {}}, {"item_id": "789", "data": {}}]
+            posts,
+            [
+                {"item_id": "123", "data": {}},
+                {"item_id": "789", "data": {}},
+            ],  # skips non-JSON line
         )
 
 
@@ -54,6 +58,7 @@ class TestIngestion(TestCase):
             user_agent="test-agent",
         )
 
+    # mock Tweet JSON builder
     def make_post(
         self,
         tweet_id="123",
@@ -127,6 +132,7 @@ class TestIngestion(TestCase):
         }
 
     def test_upsert_authors_new_author(self):
+        """Basic test for ingesting new Tweet authors into DB."""
         posts = [
             self.make_post(tweet_id="1968", author_id="1901"),
             self.make_post(tweet_id="500", author_id="501"),
@@ -138,6 +144,7 @@ class TestIngestion(TestCase):
         self.assertTrue(TwitterAuthor.objects.filter(author_twitter_id="501").exists())
 
     def test_upsert_authors_duplicate_author(self):
+        """Test for updating existing author information in DB."""
         TwitterAuthor.objects.create(
             author_twitter_id="1",
             screen_name="Joshua Zirkzee",
@@ -164,6 +171,7 @@ class TestIngestion(TestCase):
         self.assertTrue(test_author.screen_name == "Bruno Fernandes")
 
     def test_upsert_authors_incomplete_post(self):
+        """Test for avoiding insertion of incomplete author data into DB."""
         posts = [
             self.make_post(tweet_id="1968", author_id=None),
             self.make_post(tweet_id="500", author_id="501"),
@@ -184,6 +192,7 @@ class TestIngestion(TestCase):
         mock_insert_media,
         mock_insert_viewed_tweet,
     ):
+        """Integration test for ingesting new Tweet data into DB."""
         post_one = self.make_post(
             tweet_id="23",
             author_id="23",
@@ -221,7 +230,9 @@ class TestIngestion(TestCase):
             call(post_one, tweet_one),
             call(post_two, tweet_two),
         ]
-        mock_insert_media.assert_has_calls(expected_media_calls)
+        mock_insert_media.assert_has_calls(
+            expected_media_calls
+        )  # confirm other functions called as expected
 
         expected_viewed_calls = [
             call(
@@ -248,6 +259,7 @@ class TestIngestion(TestCase):
         mock_insert_media,
         mock_insert_viewed_tweet,
     ):
+        """Integration test for ingesting duplicate Tweet data into DB."""
         Tweet.objects.create(
             tweet_id="23",
             conversation_id="1234567890",
@@ -329,12 +341,13 @@ class TestIngestion(TestCase):
         mock_insert_media,
         mock_insert_viewed_tweet,
     ):
+        """Integration test for avoiding ingestion of incomplete Tweet data into DB."""
         post_one = self.make_post(
             tweet_id=None,
             author_id="23",
             screen_name="Michael Jordan",
             full_text="I'm the GOAT",
-        )
+        )  # incomplete Tweet info, invalid
         post_two = self.make_post(
             tweet_id="99",
             author_id="99",
@@ -374,6 +387,8 @@ class TestIngestion(TestCase):
         mock_insert_viewed_tweet.assert_has_calls(expected_viewed_calls)
 
     def test_insert_media_basic(self):
+        """Basic test for ingesting Tweet media data into DB."""
+
         # instantiate tweet objects to be used as valid foreign key for media insertion
         tweet_one = Tweet.objects.create(
             tweet_id="1968",
@@ -407,6 +422,8 @@ class TestIngestion(TestCase):
         self.assertTrue(TweetMedia.objects.filter(media_key="000").exists())
 
     def test_insert_media_duplicate(self):
+        """Test for ingesting duplicate Tweet media data into DB."""
+
         # instantiate tweet objects to be used as valid foreign key for media insertion
         tweet_one = Tweet.objects.create(
             tweet_id="1968",
@@ -437,10 +454,14 @@ class TestIngestion(TestCase):
         _insert_media(post_one, tweet_one)
         _insert_media(post_two, tweet_two)
 
-        self.assertEqual(TweetMedia.objects.count(), 1)
+        self.assertEqual(
+            TweetMedia.objects.count(), 1
+        )  # only one item, no duplicate insertion
         self.assertTrue(TweetMedia.objects.filter(media_key="777").exists())
 
     def test_insert_media_incomplete_post(self):
+        """Test for avoiding ingestion of incomplete Tweet media data into DB."""
+
         # instantiate tweet objects to be used as valid foreign key for media insertion
         tweet_one = Tweet.objects.create(
             tweet_id="1968",
@@ -475,6 +496,7 @@ class TestIngestion(TestCase):
         self.assertTrue(TweetMedia.objects.filter(media_key="777").exists())
 
     def test_insert_viewed_tweet_basic(self):
+        """Basic test for creating new ViewedTweet object in DB."""
         tweet_one = Tweet.objects.create(
             tweet_id="1968",
             conversation_id="1234567890",
@@ -510,6 +532,7 @@ class TestIngestion(TestCase):
         self.assertTrue(ViewedTweet.objects.filter(tweet=tweet_two).exists())
 
     def test_insert_viewed_tweet_duplicate(self):
+        """Basic test for creating multiple ViewedTweet objects that reference same Tweet in DB."""
         tweet_one = Tweet.objects.create(
             tweet_id="1968",
             conversation_id="1234567890",

@@ -11,7 +11,7 @@ class AppUserCreationForm(UserCreationForm):
     def clean_email(self):
         email = self.cleaned_data["email"]
 
-        if AppUser.objects.filter(email=email).exists():
+        if AppUser.objects.filter(email=email).exists():  # sign up email must be unique
             raise forms.ValidationError("An account with this email already exists.")
 
         return email
