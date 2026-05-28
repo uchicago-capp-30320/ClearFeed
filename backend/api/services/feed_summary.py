@@ -20,6 +20,8 @@ def build_feed_summary(user):
     cache_key = _cache_key(user)
     cached_summary = cache.get(cache_key)
     if cached_summary is not None:
+        # Feed summaries are reused across the analysis flow, so cache the fully
+        # assembled payload instead of recomputing the same aggregates on every call.
         return cached_summary
 
     summary = _build_feed_summary_uncached(user)
@@ -45,6 +47,8 @@ def _cache_key(user):
 
 
 def _get_viewed_tweet_ids(user):
+    # The summary is based on tweets the user has actually viewed, not the full
+    # timeline, so downstream aggregations all share the same scope.
     return (
         ViewedTweet.objects.filter(user=user)
         .values_list("tweet_id", flat=True)
@@ -56,6 +60,8 @@ def _format_topic_label(topic):
     if not topic:
         return ""
 
+    # Topic values come from stored identifiers, so normalize underscores/hyphens
+    # into a display label that reads well in charts and prompt context.
     cleaned = re.sub(r"[_-]+", " ", topic).strip()
     small_words = {"and", "or", "of", "the", "a", "an", "to", "in", "for", "on", "with"}
     words = cleaned.split()
@@ -72,12 +78,16 @@ def _format_topic_label(topic):
 def _get_topic_summary(user):
     tweet_ids = _get_viewed_tweet_ids(user)
 
+    # Count topics across the viewed sample, then keep only the most common few
+    # so the chart stays readable and the prompt stays focused.
     topic_counts = (
         TopicResult.objects.filter(tweet_id__in=tweet_ids)
         .values("topic")
         .annotate(count=Count("topic"))
         .order_by("-count", "topic")[:5]
     )
+    # Percentages are computed over all topic annotations, not tweet count, because
+    # a single tweet may contribute to this topic table depending on the source data.
     total = TopicResult.objects.filter(tweet_id__in=tweet_ids).count()
 
     labels = [_format_topic_label(item["topic"]) for item in topic_counts]
@@ -111,6 +121,8 @@ def _get_overview_summary(user):
         .get("first_viewed")
     )
 
+    # "Top users" here reflects the promoted tweets in the viewed sample, which
+    # makes the overview more informative than listing every author equally.
     top_users = [
         item["author__screen_name"] or item["author__display_name"] or "Unknown"
         for item in viewed_tweets.filter(promoted=True)
@@ -128,6 +140,8 @@ def _get_overview_summary(user):
 
 
 def _get_word_frequency_summary(user):
+    # Re-tokenize the raw text so word frequencies stay consistent with the
+    # shared wordcloud tokenizer rather than a separate summary-specific rule.
     texts = (
         Tweet.objects.filter(tweet_id__in=_get_viewed_tweet_ids(user))
         .exclude(full_text__isnull=True)
@@ -152,6 +166,8 @@ def _get_word_frequency_summary(user):
 
 
 def _get_sentiment_summary(user):
+    # Collapse sentiment rows into a compact three-bucket distribution for the
+    # chart and compute a simple signed average for quick directional reading.
     counts = {
         item["sentiment"].lower(): item["count"]
         for item in SentimentResult.objects.filter(
