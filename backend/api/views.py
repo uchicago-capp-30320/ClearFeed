@@ -139,7 +139,6 @@ def onboarding(request):
     return render(request, "onboarding.html", {})
 
 
-# PLACEHOLDER user profile view
 def profile(request, user_id):
     user = AppUser.objects.filter(id=user_id)
 
@@ -150,7 +149,6 @@ def profile(request, user_id):
     return render(request, "profile.html", context)
 
 
-# PLACEHOLDER privacy agreement view
 def privacy(request):
     return render(request, "privacy.html", {})
 
