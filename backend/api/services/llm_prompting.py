@@ -12,6 +12,8 @@ _generator = None
 def get_llm_generator():
     global _generator
     if _generator is None:
+        # Keep the pipeline cached for the life of the process; loading the model
+        # is expensive and this service is called repeatedly by the runner.
         _generator = pipeline("text-generation", model=MODEL_NAME)
     return _generator
 
@@ -26,6 +28,8 @@ def analyze_sampled_tweets(tweets, feed_summary=None):
 
     try:
         generator = get_llm_generator()
+        # Some tokenizers need the prompt wrapped in a chat template, but the
+        # fallback keeps plain-text prompts working for simpler pipelines.
         model_input = _format_model_input(generator, prompt)
         result = generator(
             model_input,
@@ -36,6 +40,8 @@ def analyze_sampled_tweets(tweets, feed_summary=None):
         raw_output = ""
         if result and isinstance(result, list):
             raw_output = result[0].get("generated_text", "") or ""
+        # The model is instructed to return JSON, but we still normalize the
+        # output so callers get a stable schema even when the model drifts.
         structured = parse_analysis_output(raw_output)
         return {
             "model_name": MODEL_NAME,
@@ -58,6 +64,8 @@ def analyze_sampled_tweets(tweets, feed_summary=None):
 def build_analysis_prompt(tweets, feed_summary=None):
     top_words = _top_words(tweets)
     top_authors = _top_authors(tweets)
+    # Each sampled tweet becomes a numbered line so the model can cite concrete
+    # evidence instead of free-associating from aggregate stats alone.
     tweet_lines = [
         f"{index + 1}. @{tweet['screen_name'] or 'unknown'} ({tweet['author_name']}): {tweet['text']}"
         for index, tweet in enumerate(tweets)
@@ -93,6 +101,8 @@ def _format_model_input(generator, prompt):
     if tokenizer and hasattr(tokenizer, "apply_chat_template"):
         messages = [{"role": "user", "content": prompt}]
         try:
+            # Chat-tuned models expect role-tagged messages rather than a raw
+            # prompt string, so prefer that format when the tokenizer supports it.
             return tokenizer.apply_chat_template(
                 messages,
                 tokenize=False,
@@ -110,10 +120,12 @@ def parse_analysis_output(raw_output):
     if not raw_output:
         return _empty_analysis()
 
+    # First try the strict contract: the model returned JSON exactly as asked.
     parsed = _load_json_from_text(raw_output)
     if parsed:
         return _normalize_analysis(parsed)
 
+    # If the model ignored the schema, salvage a readable reflection from text.
     return _fallback_from_text(raw_output)
 
 
@@ -174,6 +186,8 @@ def _format_feed_summary_context(feed_summary):
 
     category_labels = categories.get("labels") or []
     category_series = categories.get("series") or [{}]
+    # The summary data is chart-shaped, so flatten the first series into a
+    # human-readable list for the prompt.
     category_data = category_series[0].get("data") if category_series else []
     category_pairs = _format_labeled_values(category_labels, category_data, unit="%")
     lines.append(f"- Topics: {category_pairs if category_pairs else 'none'}.\n")
@@ -230,6 +244,8 @@ def _fallback_from_text(raw_output):
 def _load_json_from_text(text):
     text = text.strip()
     candidates = [text]
+    # Models sometimes wrap the JSON in extra prose, so try the first JSON object
+    # embedded in the text before giving up.
     match = re.search(r"\{.*\}", text, flags=re.DOTALL)
     if match:
         candidates.insert(0, match.group(0))
@@ -259,6 +275,9 @@ def _coerce_text(value):
 
 
 def _top_words(tweets):
+    # Below are some functions that extract some statistics, but
+    # only from the sampled tweets. Since the LLM will just be a funny
+    # reflection it doesn't need to be extremely accurate which requires to include all tweets.
     counts = {}
     for tweet in tweets:
         for word in _tokenize(tweet.get("text", "")):
@@ -289,6 +308,8 @@ def _top_authors(tweets):
 
 
 def _tokenize(text):
+    # Strip URLs and handles before counting words so the top terms emphasize
+    # actual topics rather than account names or link noise.
     cleaned = re.sub(r"https?://\S+|www\.\S+|@\w+", " ", text.lower())
     return [
         word
