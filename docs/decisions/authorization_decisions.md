@@ -147,13 +147,19 @@ Controls routing behavior after:
 
 ## `templates/registration/login.html`
 
+Login HTML template with user and password authorization fields and custom ClearFeed CSS.
+
 ---
 
 ## `templates/registration/signup.html`
 
+Signup HTML template with user and password input fields and custom ClearFeed CSS.
+
 ---
 
 ## `templates/registration/logged_out.html`
+
+Basic HTML template for user log out.
 
 ---
 
