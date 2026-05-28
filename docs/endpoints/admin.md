@@ -4,65 +4,107 @@ The following endpoints support administrative and non-analysis-related pages wi
 
 ---
 
-## `/home`
+## `GET /landing/`
 
-### Parameters
-- None
+Renders the public landing page. No authentication required.
 
 ### Response
-- `home.html`: HTML page displaying the application’s landing page
-
-### Template Context Variables
-- None
+- `landing.html`
 
 ---
 
-## `/login`
+## `GET /login/`
 
-### Parameters
-- None
+Django's built-in login view.
 
 ### Response
-- `login.html`: HTML page for user login
-
-### Template Context Variables
-- None
+- `registration/login.html`
 
 ---
 
-## `/profile`
+## `POST /login/`
 
-### Parameters
-- `user_id`: Primary key for `AppUser`
+Authenticates the user and redirects on success.
 
-### Response
-- `profile.html`: HTML page displaying user-specific profile information
-
-### Template Context Variables
-- `user`: corresponding `AppUser` object
+### Parameters (form body)
+- `username`: User email
+- `password`: User password
 
 ---
 
-## `/privacy`
+## `GET /logout/`
 
-### Parameters
-- None
-
-### Response
-- `privacy.html`: HTML page displaying the application’s privacy policy
-
-### Template Context Variables
-- None
+Logs the current user out via Django's built-in logout view.
 
 ---
 
-## `/tutorial`
+## `GET /signup/`
 
-### Parameters
-- None
+Renders the account creation form.
 
 ### Response
-- `tutorial.html`: HTML page providing a brief tutorial on using the application and browser extension
+- `registration/signup.html`
 
-### Template Context Variables
-- None
+### Template Context
+- `form` (`AppUserCreationForm`): Unbound empty form instance.
+
+---
+
+## `POST /signup/`
+
+Creates a new `AppUser`, logs them in, and redirects to `/onboarding/`.
+
+### Parameters (form body)
+- `email`: New user's email address
+- `password1`, `password2`: Password and confirmation
+
+### Template Context (on validation failure)
+- `form` (`AppUserCreationForm`): Bound form instance containing validation errors.
+
+---
+
+## `GET /onboarding/`
+
+Renders the onboarding page. No authentication required.
+
+### Response
+- `onboarding.html`
+
+---
+
+## `GET /profile/`
+
+Placeholder profile view. Reads `user_id` from session.
+
+### Response
+- `profile.html`
+
+### Template Context
+- `user`: Corresponding `AppUser` object
+
+---
+
+## `GET /privacy/`
+
+Renders the privacy policy page. No authentication required.
+
+### Response
+- `privacy.html`
+
+---
+
+## `GET /topics/`
+
+Renders the topics page.
+
+### Response
+- `topics.html`
+
+---
+
+## `GET /wordcloud/`
+
+Renders the word cloud page. Requires authentication (`@login_required`).
+
+### Response
+- `wordcloud.html`

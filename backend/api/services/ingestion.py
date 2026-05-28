@@ -12,6 +12,7 @@ from api.models import (
     SessionStatus,
     AnalysisStatus,
 )
+from api.services.feed_summary import invalidate_feed_summary_cache
 from api.tasks import enqueue_session_analysis
 
 
@@ -46,6 +47,7 @@ def ingest_posts(body, platform, user_agent, user):
             _upsert_authors(posts)
             _insert_tweets(posts, user, session)
             _queue_session(session)
+            transaction.on_commit(lambda: invalidate_feed_summary_cache(user))
     except Exception as e:
         print(f"Ingestion failed: {e}")
         raise

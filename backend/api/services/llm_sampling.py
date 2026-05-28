@@ -2,8 +2,8 @@ import random
 
 from api.models import Tweet
 
-DEFAULT_SAMPLE_SIZE = 10
-MAX_SAMPLE_SIZE = 20
+DEFAULT_SAMPLE_SIZE = 50
+MAX_SAMPLE_SIZE = 100
 MAX_TWEET_CHARS = 280
 
 

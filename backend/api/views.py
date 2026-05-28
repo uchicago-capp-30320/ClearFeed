@@ -1,26 +1,21 @@
-from collections import Counter
-import re
-
 from api.forms import AppUserCreationForm
 from api.models import LLMAnalysisRun
+from api.services.feed_summary import build_feed_summary
 from api.services.llm_analysis_runner import run_user_llm_analysis
 from api.services.ingestion import ingest_posts
-from api.services.wordcloud import WORDCLOUD_LIMIT, tokenize_words
 from django.contrib.auth import login
 from django.contrib.auth.decorators import login_required
-from django.db.models import Count, Max, Min
+from django.db.models import Count, Max
 from django.http import JsonResponse
 from django.shortcuts import redirect, render
 from django.views.decorators.csrf import csrf_exempt
 from django.utils import timezone
 
 from .models import (
-    AnalysisStatus,
     AppUser,
     BrowseSession,
-    SentimentResult,
+    AnalysisStatus,
     TopicResult,
-    ToxicityResult,
     Tweet,
     ViewedTweet,
 )
@@ -144,7 +139,6 @@ def onboarding(request):
     return render(request, "onboarding.html", {})
 
 
-# PLACEHOLDER user profile view
 def profile(request, user_id):
     user = AppUser.objects.filter(id=user_id)
 
@@ -155,20 +149,8 @@ def profile(request, user_id):
     return render(request, "profile.html", context)
 
 
-# PLACEHOLDER privacy agreement view
 def privacy(request):
     return render(request, "privacy.html", {})
-
-
-# ----------------------------------------------------------------------
-# ANALYTICAL views
-# ----------------------------------------------------------------------
-
-
-TOPIC_SERIES_NAME = "Topic as a Percent of Tweets"
-WORD_FREQUENCY_SERIES_NAME = "Frequency"
-SENTIMENT_SERIES_NAME = "Percentage of Tweets"
-SENTIMENT_LABELS = ["Negative", "Neutral", "Positive"]
 
 
 def topics_page(request):
@@ -178,14 +160,6 @@ def topics_page(request):
 @login_required
 def wordcloud_page(request):
     return render(request, "wordcloud.html")
-
-
-def _get_viewed_tweet_ids(user):
-    return (
-        ViewedTweet.objects.filter(user=user)
-        .values_list("tweet_id", flat=True)
-        .distinct()
-    )
 
 
 def _resolve_analysis_user(request):
@@ -255,7 +229,6 @@ def llm_analysis_run_detail(request, run_id):
             "sample_size": run.sample_size,
             "sample_seed": run.sample_seed,
             "model_name": run.model_name,
-            "prompt_version": run.prompt_version,
             "sample_metadata": run.sample_metadata,
             "result": run.result,
             "raw_output": run.raw_output,
@@ -266,141 +239,26 @@ def llm_analysis_run_detail(request, run_id):
     )
 
 
-def _format_topic_label(topic):
-    if not topic:
-        return ""
+def _get_llm_reflection_summary(user):
+    run = LLMAnalysisRun.objects.filter(user=user).order_by("-created_at").first()
 
-    cleaned = re.sub(r"[_-]+", " ", topic).strip()
-    small_words = {"and", "or", "of", "the", "a", "an", "to", "in", "for", "on", "with"}
-    words = cleaned.split()
-    formatted = []
-    for index, word in enumerate(words):
-        lower = word.lower()
-        if index != 0 and lower in small_words:
-            formatted.append(lower)
-        else:
-            formatted.append(lower[:1].upper() + lower[1:])
-    return " ".join(formatted)
+    if not run:
+        return {
+            "status": "not_started",
+            "reflection": "",
+            "run_id": None,
+        }
 
-
-def _get_topic_summary(user):
-    tweet_ids = _get_viewed_tweet_ids(user)
-
-    topic_counts = (
-        TopicResult.objects.filter(tweet_id__in=tweet_ids)
-        .values("topic")
-        .annotate(count=Count("topic"))
-        .order_by("-count", "topic")[:5]
-    )
-    total = TopicResult.objects.filter(tweet_id__in=tweet_ids).count()
-
-    labels = [_format_topic_label(item["topic"]) for item in topic_counts]
-    data = (
-        [round((item["count"] / total) * 100) for item in topic_counts] if total else []
-    )
+    reflection = ""
+    if isinstance(run.result, dict):
+        reflection = run.result.get("reflection", "") or ""
 
     return {
-        "labels": labels,
-        "series": [
-            {
-                "name": TOPIC_SERIES_NAME,
-                "data": data,
-            }
-        ],
-    }
-
-
-def _get_overview_summary(user):
-    tweet_ids = _get_viewed_tweet_ids(user)
-    viewed_tweets = Tweet.objects.filter(tweet_id__in=tweet_ids)
-    total_tweets = viewed_tweets.count()
-    promoted_count = viewed_tweets.filter(promoted=True).count()
-    promoted_percentage = (
-        round((promoted_count / total_tweets) * 100) if total_tweets else 0
-    )
-
-    since_date = (
-        ViewedTweet.objects.filter(user=user)
-        .aggregate(first_viewed=Min("created_at"))
-        .get("first_viewed")
-    )
-
-    top_users = [
-        item["author__screen_name"] or item["author__display_name"] or "Unknown"
-        for item in viewed_tweets.filter(promoted=True)
-        .values("author__screen_name", "author__display_name")
-        .annotate(count=Count("tweet_id"))
-        .order_by("-count", "author__screen_name", "author__display_name")[:5]
-    ]
-
-    return {
-        "top_users": top_users,
-        "total_tweets": total_tweets,
-        "since_date": since_date.date().isoformat() if since_date else "",
-        "promoted_percentage": promoted_percentage,
-    }
-
-
-def _get_word_frequency_summary(user):
-    texts = (
-        Tweet.objects.filter(tweet_id__in=_get_viewed_tweet_ids(user))
-        .exclude(full_text__isnull=True)
-        .values_list("full_text", flat=True)
-    )
-
-    counts = Counter()
-    for text in texts:
-        counts.update(tokenize_words(text))
-
-    common_words = counts.most_common(WORDCLOUD_LIMIT)
-
-    return {
-        "labels": [word for word, _count in common_words],
-        "series": [
-            {
-                "name": WORD_FREQUENCY_SERIES_NAME,
-                "data": [count for _word, count in common_words],
-            }
-        ],
-    }
-
-
-def _get_sentiment_summary(user):
-    counts = {
-        item["sentiment"].lower(): item["count"]
-        for item in SentimentResult.objects.filter(
-            tweet_id__in=_get_viewed_tweet_ids(user)
-        )
-        .values("sentiment")
-        .annotate(count=Count("sentiment"))
-    }
-    negative_count = counts.get("negative", 0)
-    neutral_count = counts.get("neutral", 0)
-    positive_count = counts.get("positive", 0)
-    total = negative_count + neutral_count + positive_count
-
-    data = (
-        [
-            round((negative_count / total) * 100),
-            round((neutral_count / total) * 100),
-            round((positive_count / total) * 100),
-        ]
-        if total
-        else [0, 0, 0]
-    )
-    sentiment_average = (
-        round((positive_count - negative_count) / total, 2) if total else 0
-    )
-
-    return {
-        "sentiment_average": sentiment_average,
-        "labels": SENTIMENT_LABELS,
-        "series": [
-            {
-                "name": SENTIMENT_SERIES_NAME,
-                "data": data,
-            }
-        ],
+        "status": run.status,
+        "reflection": reflection,
+        "run_id": str(run.id),
+        "model_name": run.model_name,
+        "created_at": run.created_at.isoformat() if run.created_at else None,
     }
 
 
@@ -421,24 +279,6 @@ def _get_home_summary_stats(user):
         "total_tweets": total_tweets,
         "days_since_last": days_since_last,
     }
-
-
-# comprehensive view for all user-related feed analysis
-def full_analysis(request, user_id):
-    user = AppUser.objects.filter(id=user_id)
-    # user_viewed_tweets = ViewedTweet.objects.filter(user=user).values_list("tweet", flat=True)
-
-    context = {
-        "user": AppUser.objects.filter(id=user),
-        "sentiment_results": SentimentResult.objects.filter(
-            tweet__viewedtweet__user=user
-        ),
-        "topic_results": TopicResult.objects.filter(tweet__viewedtweet__user=user),
-        "toxicity_results": ToxicityResult.objects.filter(
-            tweet__viewedtweet__user=user
-        ),
-    }
-    return render(request, "full_analysis.html", context)
 
 
 def topic_results(request, user_id=None):
@@ -469,10 +309,8 @@ def api_feed_summary(request):
 
     return JsonResponse(
         {
-            "overview": _get_overview_summary(user),
-            "categories": _get_topic_summary(user),
-            "word_frequency": _get_word_frequency_summary(user),
-            "sentiment": _get_sentiment_summary(user),
+            **build_feed_summary(user),
+            "llm_analysis": _get_llm_reflection_summary(user),
         }
     )
 
@@ -492,6 +330,6 @@ def feed_summary(request):
     """
     Returns the actual feed summary page, which uses fetch to get the data from /api/feed-summary/.
 
-    User check and data acquisition occurs in api_feed_summary
+    User check and data acquisition occurs in api_feed_summary.
     """
     return render(request, "user_scroll.html")

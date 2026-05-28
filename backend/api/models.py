@@ -270,7 +270,6 @@ class LLMAnalysisRun(models.Model):
     sample_size = models.IntegerField()
     sample_seed = models.BigIntegerField(null=True)
     model_name = models.TextField()
-    prompt_version = models.TextField()
     sample_metadata = models.JSONField(null=True)
     result = models.JSONField(null=True)
     raw_output = models.TextField(null=True)
