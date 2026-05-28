@@ -120,7 +120,9 @@ def landing(request):
 
 def signup(request):
     if request.method == "POST":
-        form = AppUserCreationForm(request.POST)
+        form = AppUserCreationForm(
+            request.POST
+        )  # pass in user data to custom AppUserCreationForm model
 
         if form.is_valid():
             user = form.save()
